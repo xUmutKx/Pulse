@@ -375,7 +375,7 @@ fun FilesNavBar(tab: String, onTab: (String) -> Unit, onShare: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     val openTool = com.umutk.pulse.LocalOpenTool.current
     val items = listOf(
-        Triple("home", "home" to tr("Home", "Ana"), "home"), Triple("files", "folder" to tr("Browse", "Gözat"), "files"), Triple("share", "share" to tr("Share", "Paylaş"), "share"),
+        Triple("files", "folder" to tr("Browse", "Gözat"), "files"), Triple("share", "share" to tr("Share", "Paylaş"), "share"),
         Triple("search", "search" to tr("Search", "Ara"), "search"), Triple("more", "more" to tr("More", "Diğer"), "more"),
     )
     Row(Modifier.fillMaxWidth().background(bg).then(if (mat) Modifier else Modifier.frame(T)).navigationBarsPadding().padding(vertical = 8.dp)) {

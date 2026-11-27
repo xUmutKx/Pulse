@@ -232,13 +232,14 @@ private fun FilesPageInner() {
     val standalone = ctx is com.umutk.pulse.FilesActivity
     // the standalone Files app starts on its home page (storage, recent, types); inside Pulse the explorer opens at once
     // an archive is already on its way in (set the moment the intent arrives, before the content:// copy that can take a second): skip the home flash
-    var tab by rememberSaveable { mutableStateOf(if (standalone && !FilesPrefs.startBrowse && !FilesLaunch.opening) "home" else "files") }
+    // the Files home page is gone: the app opens on the browser
+    var tab by rememberSaveable { mutableStateOf("files") }
     val top = remember { Environment.getExternalStorageDirectory() }
     // a tool opened from the Files home (Storage analyze, file types...) or from More goes back where it was opened, not to Browse
     var toolFrom by rememberSaveable { mutableStateOf("") }
     val back: () -> Unit = { tab = toolFrom.ifEmpty { "files" }; toolFrom = "" }
     // Back from any other tab of the standalone app goes to the home page first
-    androidx.activity.compose.BackHandler(enabled = standalone && tab != "home") { if (tab in setOf("tree", "types", "cache", "apps") && toolFrom.isNotEmpty()) back() else tab = "home" }
+    androidx.activity.compose.BackHandler(enabled = standalone && tab != "home" && tab != "files") { if (tab in setOf("tree", "types", "cache", "apps") && toolFrom.isNotEmpty()) back() else tab = "files" }
     // a tool page (Folder sizes, File types, Clean cache, Apps) always steps back to the page it was opened from, never out of the app
     androidx.activity.compose.BackHandler(enabled = !standalone && tab in setOf("tree", "types", "cache", "apps")) { back() }
     // the full-screen window is the standalone app's; embedded in Pulse the page stays a page

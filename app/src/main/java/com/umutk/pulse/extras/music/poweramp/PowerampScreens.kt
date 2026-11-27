@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -590,6 +591,7 @@ internal fun VolumeBar(value: Float, onChange: (Float) -> Unit, style: PowerampS
 
 /** Waveform, block or line seek bar. [onScrub] gets the fraction while dragging, [onCommit] the final one. */
 @Composable
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 internal fun SeekBar(
     progress: () -> Float,
     seed: Int,
@@ -604,6 +606,8 @@ internal fun SeekBar(
     // the bars are drawn this tall while the touch area is the whole (taller) modifier, so a drag beside the bars still seeks
     drawHeight: androidx.compose.ui.unit.Dp? = null,
 ) {
+    // with the keyboard up (the lyrics search, a name box) the wave is not drawn: it rose with the page and showed through the window over it
+    if (androidx.compose.foundation.layout.WindowInsets.isImeVisible) { Spacer(modifier); return }
     val progressNow by rememberUpdatedState(progress)
     val heights = remember(seed) {
         val r = Random(seed)

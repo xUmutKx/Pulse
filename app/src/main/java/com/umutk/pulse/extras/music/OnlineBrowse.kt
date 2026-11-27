@@ -3,6 +3,7 @@ package com.umutk.pulse.extras.music
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -82,8 +83,8 @@ fun OnlineBrowse(startTab: Int = 0, embedded: Boolean = false, onBack: () -> Uni
             decorationBox = { inner -> if (query.isEmpty()) Text(tr("Search songs", "Şarkı ara"), color = T.sub, fontSize = 16.sp); inner() })
         // your YouTube Music: liked, recent, popular, then your playlists as covers
         if (tab == 0 && query.isBlank()) {
-            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                @Composable fun chip(t: String, on: () -> Unit) = Text(t, color = T.text, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(T.panel).clickable { on() }.padding(horizontal = 12.dp, vertical = 7.dp))
+            Row(Modifier.padding(top = 10.dp).horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                @Composable fun chip(t: String, on: () -> Unit) = Text(t, color = T.text, fontSize = 13.sp, maxLines = 1, softWrap = false, modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(T.panel).clickable { on() }.padding(horizontal = 12.dp, vertical = 7.dp))
                 if (ytIn) { chip(tr("Liked", "Beğenilen")) { show(tr("Your liked songs", "Beğendiğin şarkılar")) { OnlineMusic.ytLiked(ctx) } }; chip(tr("Recent", "Son çalınan")) { show(tr("Played lately", "Son çalınanlar")) { OnlineMusic.ytHistory(ctx) } } }
                 chip(tr("For you", "Senin için")) { show(tr("For you", "Senin için")) { OnlineMusic.forYou(ctx) } }
                 chip(tr("History", "Geçmiş")) { show(tr("Played here", "Burada çalınanlar")) { OnlineMusic.history(ctx) } }
