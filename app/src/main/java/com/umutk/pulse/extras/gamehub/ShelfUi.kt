@@ -584,7 +584,9 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
     // with the name) and the real pictures come in twelve at a time, six read together. A picture that cannot be read is skipped, never the whole
     // rack (one bad file used to stop the reading and the page stayed on "Loading the covers" for good)
     // it starts with the covers already known (kept for the whole session), so a shelf opened again is full at once
-    val loadedState = remember(listKey) { androidx.compose.runtime.mutableStateOf<List<Pair<GameRow, androidx.compose.ui.graphics.ImageBitmap>>>(list.mapNotNull { g -> CdArt.cache[g.pkg]?.let { g to it } }) }
+    // the rack is there at the first frame: a game with no cover yet stands as a soft coloured blotch (small, drawn at once), the real cover takes its place when it comes in, and it is kept
+    // for the next time (in memory and on the phone), so a shelf opened again shows every cover at once; nothing waits for the covers to be looked for
+    val loadedState = remember(listKey) { androidx.compose.runtime.mutableStateOf<List<Pair<GameRow, androidx.compose.ui.graphics.ImageBitmap>>>(list.map { g -> g to (CdArt.cache[g.pkg] ?: CdArt.names[g.pkg] ?: CdArt.blots.getOrPut(g.pkg) { blotCover(g.name) }) }) }
     val loaded = loadedState.value
     // how many of the games have been looked at so far (the covers are read in the background): shown as a bar and a ratio, so a long read never looks like a hang
     val looked = remember(listKey) { androidx.compose.runtime.mutableIntStateOf(0) }
@@ -643,6 +645,22 @@ internal object CdArt {
     val cache = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
     val names = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
     val fallback: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    /** The soft coloured blotches that stand for a cover that is not in yet (small). */
+    val blots = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
+}
+
+/** A small placeholder cover: a colour taken from the name, darker at the bottom, with a pale blotch in it. No text, so it is cheap and never reads as a wrong name. */
+private fun blotCover(name: String): androidx.compose.ui.graphics.ImageBitmap {
+    val size = 96
+    val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+    val c = android.graphics.Canvas(bmp)
+    val hue = ((name.hashCode() and 0x7fffffff) % 360).toFloat()
+    val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    p.shader = android.graphics.LinearGradient(0f, 0f, 0f, size.toFloat(), android.graphics.Color.HSVToColor(floatArrayOf(hue, .5f, .5f)), android.graphics.Color.HSVToColor(floatArrayOf(hue, .65f, .22f)), android.graphics.Shader.TileMode.CLAMP)
+    c.drawRect(0f, 0f, size.toFloat(), size.toFloat(), p)
+    p.shader = null; p.color = android.graphics.Color.argb(46, 255, 255, 255)
+    c.drawCircle(size * .38f, size * .4f, size * .27f, p)
+    return bmp.asImageBitmap()
 }
 
 /** A square cover for a game that has no picture: a colour taken from its name and the name across it. */
