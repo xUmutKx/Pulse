@@ -593,7 +593,12 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
     androidx.compose.runtime.LaunchedEffect(list.map { it.pkg }, ver) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             fun shown() = list.map { g -> g to (CdArt.cache[g.pkg] ?: CdArt.names.getOrPut(g.pkg) { nameCover(g.name) }) }
-            loadedState.value = shown()
+            // The rack is baked again whole (one shader drawing for each case) whenever any picture it holds changes, so the pictures are handed over as seldom as possible:
+            // the rack opens at once with what there is (the first state, blotches for the missing ones), and the covers that come in are handed over together, once at the end
+            // (and once in the middle when the search is long, every 45 seconds at most). Handing them over after each group of twelve had the rack baked again and again, and with
+            // many games it never finished: the screen stayed on "Loading".
+            var lastHandOver = android.os.SystemClock.elapsedRealtime()
+            var changed = false
             val todo = list.filter { !CdArt.cache.containsKey(it.pkg) || it.pkg in CdArt.fallback }
             looked.intValue = list.size - todo.size
             val gate = kotlinx.coroutines.sync.Semaphore(6)
@@ -611,9 +616,11 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
                     }.forEach { it.await() }
                 }
                 looked.intValue = (looked.intValue + chunk.size).coerceAtMost(list.size)
-                loadedState.value = shown()
+                changed = true
+                if (android.os.SystemClock.elapsedRealtime() - lastHandOver > 45_000L) { loadedState.value = shown(); lastHandOver = android.os.SystemClock.elapsedRealtime(); changed = false }
             }
             looked.intValue = list.size
+            if (changed || todo.isNotEmpty()) loadedState.value = shown()
         }
     }
     val state = com.umutk.pulse.extras.gamehub.cdshelf.rememberCdRackScrollState()
