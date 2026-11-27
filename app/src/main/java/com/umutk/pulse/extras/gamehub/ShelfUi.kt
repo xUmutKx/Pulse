@@ -573,7 +573,8 @@ internal fun CdShelf(games: List<GameRow>, hidden: Set<String>, pal: Pal, onPlay
     // a rack of more than 120 cases is slow to draw: the first 120 (the favourites come first)
     // the list is keyed by what is in it (the packages), not by the list objects: the caller can hand over a new list each time the screen is drawn, and everything below
     // that was remembered on the old one began again each time (the covers came in, the screen redrew, the rack was emptied again: it stayed on "Loading" for good with many games)
-    val shownGames = games.filter { it.pkg !in hidden }.take(120)
+    // (the page has already chosen which games to show, hidden ones included when asked for: they are not left out a second time here, which had emptied the shelf of "hidden" or "all" lists)
+    val shownGames = games.take(120)
     val listKey = shownGames.map { it.pkg }
     val list = remember(listKey) { shownGames }
     // the games with no cover are looked for in the background, once
