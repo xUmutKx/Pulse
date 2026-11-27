@@ -153,12 +153,12 @@ object KeyboardPrefs {
     /** A sum typed in the field is answered when "=" follows it (off by default). */
     var calcEquals by mutableStateOf(false)
     /** One-time codes from new notifications offered in the bar (off by default; needs Pulse's notification access). */
-    var otpOn by mutableStateOf(false)
+    var otpOn by mutableStateOf(true)
     /** Copied links lose their trackers (utm_…, fbclid …). On by default. */
     var cleanLinks by mutableStateOf(true)
     /** Bumped when the person picks or clears a font, so the keyboard reads it again. */
     var fontRev by mutableStateOf(0)
-    fun otpCodes(c: Context): Boolean = c.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean("otpCodes", false)
+    fun otpCodes(c: Context): Boolean = c.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean("otpCodes", true)
     /** The digit set the digit keys type (latin by default). */
     var numerals by mutableStateOf("latin")
     /** The gap of the split keys, in tenths of a key (20 = two keys, as before). */
@@ -440,7 +440,7 @@ object KeyboardPrefs {
             if (kotlin.math.abs(floatScale - .76f) < .001f) floatScale = .88f
             p.edit().putBoolean("floatWide2017", true).putFloat("floatScale", floatScale).apply()
         }
-        numCorners = p.getString("numCorners", "off") ?: "off"; calcEquals = p.getBoolean("calcEquals", false); otpOn = p.getBoolean("otpCodes", false); cleanLinks = p.getBoolean("cleanLinks", true); numerals = p.getString("numerals", "latin") ?: "latin"; splitGap = p.getInt("splitGap", 20); keyRadius = p.getInt("keyRadius", -1); keyIcons = p.getString("keyIcons", "theme") ?: "theme"; gifKey = p.getString("gifKey", "") ?: ""; powerSave = p.getBoolean("powerSave", false); perAppLang = p.getBoolean("perAppLang", false); voiceWhisper = p.getBoolean("voiceWhisper", false); hybridFix = p.getBoolean("hybridFix", false)
+        numCorners = p.getString("numCorners", "off") ?: "off"; calcEquals = p.getBoolean("calcEquals", false); otpOn = p.getBoolean("otpCodes", true); cleanLinks = p.getBoolean("cleanLinks", true); numerals = p.getString("numerals", "latin") ?: "latin"; splitGap = p.getInt("splitGap", 20); keyRadius = p.getInt("keyRadius", -1); keyIcons = p.getString("keyIcons", "theme") ?: "theme"; gifKey = p.getString("gifKey", "") ?: ""; powerSave = p.getBoolean("powerSave", false); perAppLang = p.getBoolean("perAppLang", false); voiceWhisper = p.getBoolean("voiceWhisper", false); hybridFix = p.getBoolean("hybridFix", false)
         // (the AI fix key can be put on the bar in the bar settings; nothing is added there by itself)
         // the correction made while typing pauses (it changed the text under the hands of a fast typist) is off for everyone once; it can be switched on again
         if (!p.getBoolean("pauseOff13", false)) { pauseFix = false; p.edit().putBoolean("pauseOff13", true).putBoolean("pauseFix", false).apply() }
