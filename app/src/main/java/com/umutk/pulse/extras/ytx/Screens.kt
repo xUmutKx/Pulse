@@ -602,9 +602,12 @@ fun LibraryScreen(
     scrollToTop: Int = 0,
 ) {
     val signedIn = Account.signedIn
+    // signed out the History row shows what was watched on this phone; after signing in it is loaded again from the account
+    var wasSignedOut by remember { mutableStateOf(!signedIn) }
     LaunchedEffect(signedIn) {
+        if (!signedIn) { wasSignedOut = true; lib.history.refresh() }
         if (signedIn) {
-            lib.history.ensureLoaded()
+            if (wasSignedOut) { wasSignedOut = false; lib.history.refresh() } else lib.history.ensureLoaded()
             if (lib.playlists.isEmpty()) lib.loadPlaylists()
             if (lib.channels.isEmpty()) lib.loadChannels()
         }
@@ -621,6 +624,14 @@ fun LibraryScreen(
         ) {
         LazyColumn(state = rememberScrollToTop(scrollToTop), contentPadding = contentPadding.withTop(top)) {
             if (!signedIn) {
+                if (lib.history.videos.isNotEmpty()) {
+                    item(key = "historyTitleLocal") { SectionTitle(I18n.t("history", "History")) }
+                    item(key = "historyLocal") {
+                        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            items(lib.history.videos.take(20), key = { "h-" + it.id }) { video -> HistoryCard(video) { onOpen(video) } }
+                        }
+                    }
+                }
                 item {
                     EmptyState(
                         icon = Icons.Rounded.VideoLibrary,
