@@ -66,12 +66,12 @@ private fun material(k: String): ImageVector = when (k) {
     "newfolder" -> Icons.Outlined.CreateNewFolder; "paste" -> Icons.Outlined.ContentPaste
     "extract" -> Icons.Outlined.Archive; "view" -> Icons.Outlined.Visibility; "radio" -> Icons.Outlined.Radio; "shieldOk" -> Icons.Outlined.VerifiedUser; "eyeOn" -> Icons.Outlined.Visibility; "eyeOff" -> Icons.Outlined.VisibilityOff
     "compass" -> Icons.Outlined.Explore; "level" -> Icons.Outlined.Straighten; "flash" -> Icons.Outlined.FlashlightOn
-    "light" -> Icons.Outlined.LightMode; "dice" -> Icons.Outlined.Casino; "bottle" -> Icons.Outlined.LocalDrink; "coin" -> Icons.Outlined.Paid; "clipboard" -> Icons.Outlined.ContentPaste
+    "light" -> Icons.Outlined.LightMode; "dice" -> Icons.Outlined.Casino; "bottle" -> Icons.Outlined.LocalDrink; "bgwork" -> Icons.Outlined.PowerSettingsNew; "coin" -> Icons.Outlined.Paid; "clipboard" -> Icons.Outlined.ContentPaste
     "screenshot" -> Icons.Outlined.Screenshot; "sensors" -> Icons.Outlined.Sensors; "vibrate" -> Icons.Outlined.Vibration; "stopwatch" -> Icons.Outlined.Timer
     "timer" -> Icons.Outlined.HourglassBottom; "calc" -> Icons.Outlined.Calculate; "function" -> Icons.Outlined.Functions; "terminal" -> Icons.Outlined.Terminal; "scale" -> Icons.Outlined.AspectRatio; "power" -> Icons.Outlined.PowerSettingsNew
     "volume" -> Icons.Outlined.VolumeUp; "rotate" -> Icons.Outlined.ScreenRotation; "touch" -> Icons.Outlined.TouchApp; "motion" -> Icons.Outlined.Waves; "pointer" -> Icons.Outlined.Adjust
     "compass" -> Icons.Outlined.Explore; "level" -> Icons.Outlined.Balance; "flash" -> Icons.Outlined.FlashlightOn
-    "light" -> Icons.Outlined.LightMode; "dice" -> Icons.Outlined.Casino; "bottle" -> Icons.Outlined.LocalDrink; "coin" -> Icons.Outlined.MonetizationOn
+    "light" -> Icons.Outlined.LightMode; "dice" -> Icons.Outlined.Casino; "bottle" -> Icons.Outlined.LocalDrink; "bgwork" -> Icons.Outlined.PowerSettingsNew; "coin" -> Icons.Outlined.MonetizationOn
     "clipboard" -> Icons.Outlined.ContentPaste; "screenshot" -> Icons.Outlined.Screenshot; "sensors" -> Icons.Outlined.Sensors
     "volume" -> Icons.Outlined.VolumeUp; "vibrate" -> Icons.Outlined.Vibration; "stopwatch" -> Icons.Outlined.Schedule
     "timer" -> Icons.Outlined.HourglassEmpty; "calc" -> Icons.Outlined.Calculate; "scale" -> Icons.Outlined.FormatSize

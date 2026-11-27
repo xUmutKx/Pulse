@@ -21,6 +21,8 @@ object ServiceWatchdog {
     private const val PREFS = "service_watchdog"
     private const val KEY_WANTED = "wanted"
     private const val WORK = "service-watchdog"
+    /** How long a silent service is restarted: after this it is no longer wanted. */
+    private const val GIVE_UP_MS = 2 * 60 * 60 * 1000L
 
     fun isWanted(c: Context, cls: Class<out Service>): Boolean = wantedNames(c).contains(cls.name)
 
@@ -56,8 +58,13 @@ object ServiceWatchdog {
     class CheckWorker(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
         override suspend fun doWork(): Result {
             val c = applicationContext
+            val now = System.currentTimeMillis()
             for (cls in wantedClasses(c)) {
                 if (!ServiceHealth.isStale(c, cls)) continue
+                // a service that has been silent for hours is not "wanted" any more (it ended without saying so): it is given up, not started again every 15 minutes all night
+                // (each restart is a foreground service with a notification and a live process: the battery of an overnight run)
+                val last = ServiceHealth.lastBeat(c, cls)
+                if (last == 0L || now - last > GIVE_UP_MS) { setWanted(c, cls, false); continue }
                 Log.w(TAG, "restarting ${cls.simpleName}")
                 try {
                     ContextCompat.startForegroundService(c, Intent(c, cls))

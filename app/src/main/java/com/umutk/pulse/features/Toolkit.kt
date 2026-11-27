@@ -134,6 +134,7 @@ private val tools = listOf(
     Tool("Auto clicker", "Otomatik tıklayıcı", "touch") { AutoClickerTool() },
     Tool("Coin flip", "Yazı tura", "coin") { CoinFlip() },
     Tool("Spin the bottle", "Şişe çevirme", "bottle") { SpinBottle() },
+    Tool("Background use", "Arka plan kullanımı", "bgwork") { BackgroundUse() },
     Tool("Clipboard", "Pano", "clipboard") { ClipboardTool() },
     Tool("Screenshot", "Ekran görüntüsü", "screenshot") { ScreenshotTool() },
     Tool("Sensors off", "Sensörler kapalı", "sensors") { SensorsOffTool() },
@@ -605,6 +606,49 @@ private fun SpinBottle() {
                 prefs(ctx).edit().putInt("bottle_last", (((target % 360f) + 360f) % 360f).toInt()).apply()
                 spinning = false
             }
+        }
+    }
+}
+
+/** What Pulse itself keeps running in the background: its services, since when, with a stop button each and one to stop them all, and a report to copy (the battery of a night). */
+@Composable
+private fun BackgroundUse() {
+    val ctx = LocalContext.current
+    var tick by remember { mutableStateOf(0) }
+    val rows = remember(tick) {
+        runCatching {
+            @Suppress("DEPRECATION")
+            (ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager).getRunningServices(Int.MAX_VALUE)
+                .filter { it.service.packageName == ctx.packageName }
+                .sortedBy { it.activeSince }
+        }.getOrDefault(emptyList())
+    }
+    fun stop(cn: android.content.ComponentName) {
+        runCatching { ctx.stopService(Intent().setComponent(cn)) }
+        // a stopped service must not be brought back by the watchdog
+        runCatching { com.umutk.pulse.extras.watchdog.ServiceWatchdog.setWanted(ctx, Class.forName(cn.className).asSubclass(android.app.Service::class.java), false) }
+    }
+    fun age(since: Long): String { val m = (android.os.SystemClock.elapsedRealtime() - since) / 60000; return if (m >= 60) "${m / 60} h ${m % 60} min" else "$m min" }
+    PCard {
+        ToolNote(if (rows.isEmpty()) tr("Nothing of Pulse runs in the background", "Pulse'tan arka planda çalışan bir şey yok") else tr("${rows.size} running", "${rows.size} çalışıyor"), T.text)
+        rows.forEach { r ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(r.service.shortClassName.substringAfterLast('.'), color = T.text, fontSize = 14.sp, maxLines = 1)
+                    Text((if (r.foreground) tr("notification · ", "bildirimli · ") else "") + age(r.activeSince), color = T.sub, fontSize = 12.sp)
+                }
+                PChip(false, tr("Stop", "Durdur")) { stop(r.service); tick++ }
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PButton(tr("Stop all", "Hepsini durdur"), Modifier.weight(1f)) { rows.forEach { stop(it.service) }; tick++ }
+            PButton(tr("Refresh", "Yenile"), Modifier.weight(1f)) { tick++ }
+        }
+        PButton(tr("Copy the report", "Raporu kopyala"), Modifier.fillMaxWidth().padding(top = 6.dp)) {
+            val text = "Pulse background (" + java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date()) + ")\n" +
+                rows.joinToString("\n") { r -> r.service.className + (if (r.foreground) " [fg]" else "") + " " + age(r.activeSince) }
+            (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("pulse", text))
+            Toast.makeText(ctx, tr("Copied", "Kopyalandı"), Toast.LENGTH_SHORT).show()
         }
     }
 }
