@@ -114,6 +114,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         for (i in 1..a.length) { var prev = d[0]; d[0] = i; for (j in 1..b.length) { val tmp = d[j]; d[j] = minOf(d[j] + 1, d[j - 1] + 1, prev + if (a[i - 1] == b[j - 1]) 0 else 1); prev = tmp } }
         return d[b.length]
     }
+    private var clipRetry = false
     private var quickAt = 0L
     private var quickLeft = 0
     private var quickPinned = false
@@ -170,7 +171,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
      */
     private fun takeClip(onOpen: Boolean) {
         // everything copied is kept (a password field's copy and a sensitive one are not), texts and pictures
-        val clip = runCatching { clipboard?.primaryClip }.getOrNull()?.takeIf { it.itemCount > 0 } ?: return
+        val clip = runCatching { clipboard?.primaryClip }.getOrNull()?.takeIf { it.itemCount > 0 }
+            // a very long copy can fail to come over at the first try: once more half a second later
+            ?: run { if (!clipRetry) { clipRetry = true; android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ clipRetry = false; takeClip(onOpen) }, 500L) }; return }
         if (st.incognito || st.plain) return
         if (android.os.Build.VERSION.SDK_INT >= 24 && clip.description.extras?.getBoolean("android.content.extra.IS_SENSITIVE") == true) return
         val stamp = if (android.os.Build.VERSION.SDK_INT >= 26) clip.description.timestamp else 0L
@@ -234,11 +237,16 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
         } else {
             // a very long copy can come as a text file behind an address instead of inline: it is read from there (up to 2 MB)
-            val t = (runCatching { item.coerceToText(this)?.toString() }.getOrNull()?.takeIf { uri == null || it != uri.toString() }
+            val t0 = (runCatching { item.coerceToText(this)?.toString() }.getOrNull()?.takeIf { uri == null || it != uri.toString() }
                 ?: uri?.let { u -> runCatching { contentResolver.openInputStream(u)?.use { ins -> String(ins.readBytes().let { b -> if (b.size > 2_000_000) b.copyOf(2_000_000) else b }) } }.getOrNull() })?.trim()
             // a long copy used to skip the quick-paste slot entirely (nothing showed); it belongs there too, the bar label is cut short regardless of the length
             // the newest copy wins the slot: a copied text takes it from a screenshot that is still shown
-            if (!t.isNullOrEmpty()) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null; quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 1; quickPinned = false; st.quickPinned = false; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
+            // a link copied with trackers (utm_…, fbclid, gclid, si, igshid …): the bar offers it clean, and the clipboard gets the clean one too
+            val t = t0?.let { KbLinks.clean(it) }?.also { c -> if (c != t0) { lastClipSig = "clean|" + c.take(200); runCatching { clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("link", c)) } } } ?: t0
+            if (!t.isNullOrEmpty()) { shotItem = null; shotVideo = null; st.shotVideo = false; st.shotFile = ""; st.shotThumb = null; quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 1; quickPinned = false; st.quickPinned = false; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions()
+                // the clipboard list is written off the main thread: a long copy (a page, a log) took seconds to save there, or failed, and the bar's quick paste never showed
+                scope.launch(Dispatchers.IO) { runCatching { ClipStore.addText(this@PulseKeyboardService, t) }.getOrNull()?.let { l -> withContext(Dispatchers.Main) { st.clipItems = l } } }
+                if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
         }
     }
 

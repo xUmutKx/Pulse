@@ -420,6 +420,7 @@ fun KeyboardSettings(back: () -> Unit) {
                 }
             }
             Switch(tr("Hybrid correction", "Hibrit düzeltme"), tr("Adds WM Keyboard's rules: acronyms and codes are left alone, a held-down letter (helllo) and a missed space (twowords) are mended", "WM Keyboard'ın kurallarını ekler: kısaltmalara ve kodlara dokunmaz, basılı kalan harfi (merhabaaa) ve unutulan boşluğu (ikikelime) düzeltir"), KeyboardPrefs.hybridFix) { KeyboardPrefs.hybridFix = it; save() }
+            Switch(tr("Clean copied links", "Kopyalanan linkleri temizle"), tr("Trackers (utm, fbclid, gclid, si …) are taken out of a copied link", "Kopyalanan linkten izleyiciler (utm, fbclid, gclid, si …) çıkarılır"), KeyboardPrefs.cleanLinks) { KeyboardPrefs.cleanLinks = it; save() }
             Switch(tr("Calculator and units: = answers", "Hesap makinesi ve birimler: = yanıtlar"), tr("12*5= gives the answer; 10 km to mi= converts (length, weight, temperature, area, volume, speed, time, data)", "12*5= sonucu verir; 10 km to mi= çevirir (uzunluk, ağırlık, sıcaklık, alan, hacim, hız, zaman, veri)"), KeyboardPrefs.calcEquals) { KeyboardPrefs.calcEquals = it; save() }
             // GIF search: the user's own Tenor key (empty: no GIF button)
             PField(KeyboardPrefs.gifKey, { KeyboardPrefs.gifKey = it.trim(); save() }, tr("Tenor key for GIF search (optional)", "GIF araması için Tenor anahtarı (isteğe bağlı)"), Modifier.fillMaxWidth().padding(vertical = 4.dp))
