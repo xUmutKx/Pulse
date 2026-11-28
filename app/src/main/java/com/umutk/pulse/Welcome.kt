@@ -271,10 +271,14 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "store" to (tr("Every app on its own now has its own first-start setup and keeps only the rights it needs. Pulse Core's Extra apps page lists each app with its features and a Download button.",
-        "Her ayrı uygulamanın kendi ilk kurulum ekranı var ve sadece ihtiyacı olan izinleri taşır. Pulse Core'un Ekstra uygulamalar sayfası her uygulamayı özellikleri ve İndir düğmesiyle listeler.")),
-    "lock" to (tr("Fixed a crash on Samsung / Android 17 (the clipboard was denied to a text field).",
-        "Samsung / Android 17'de çökme düzeltildi (bir yazı kutusuna pano erişimi reddediliyordu).")),
+    "store" to (tr("Apps on their own are smaller, and Calculator, TempMail, Browser and Voice Recorder are lean builds with every Pulse look. They can bring their data over from Pulse.",
+        "Ayrı uygulamalar küçüldü; Hesap makinesi, TempMail, Browser ve Ses kaydedici her Pulse görünümüyle hafif sürüm. Verilerini Pulse'tan alabilirler.")),
+    "keyboard" to (tr("Keyboard: the Google look in your phone's own colours at first start, the Alt / Esc / Ctrl / Tab row off by default, and no more last word coming back after the app's send button.",
+        "Klavye: ilk açılışta telefonun renklerinde Google görünümü, Alt / Esc / Ctrl / Tab satırı varsayılan kapalı, uygulamanın gönder düğmesinden sonra son kelime geri gelmiyor.")),
+    "folder" to (tr("Messages no longer shows a Blocked line on top, and Files keeps bookmarks off the top of Browse until you switch them on.",
+        "Mesajlar'da üstte Engelli satırı yok, Dosyalar'da yer imleri açmadıkça Gözat'ın üstünde durmaz.")),
+    "dice" to (tr("Coin flip and dice are quicker and land with a snap.", "Yazı-tura ve zar daha hızlı, tak diye duruyor.")),
+    "lock" to (tr("Fixed a crash on Android 10 and older phones when previewing files.", "Android 10 ve eski telefonlarda dosya önizlemesindeki çökme düzeltildi.")),
 )
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
 @Composable
