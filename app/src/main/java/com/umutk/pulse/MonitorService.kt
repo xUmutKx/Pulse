@@ -312,10 +312,11 @@ open class ToolkitTile : TileService() {
                     "shake" -> cv.translate(size * 0.12f * damp * kotlin.math.sin(t * 8f * Math.PI.toFloat()), 0f)
                     "bounce" -> cv.translate(0f, -size * 0.22f * kotlin.math.abs(kotlin.math.sin(t * 2f * Math.PI.toFloat())) * damp)
                     "pop" -> { val k = 1f - 0.35f * kotlin.math.sin(t * Math.PI.toFloat()); cv.scale(k, k, c, c) }
-                    else -> { val k = 1f + 0.22f * kotlin.math.sin(t * 2f * Math.PI.toFloat()) * damp; cv.scale(k, k, c, c) }
+                    else -> { val k = 1f + (if (kind == "pulse") 0.08f else 0.22f) * kotlin.math.sin(t * 2f * Math.PI.toFloat()) * damp; cv.scale(k, k, c, c) }
                 }
                 // a little room round the icon so the move is not cut at the tile's edge
-                d.setBounds(size / 8, size / 8, size - size / 8, size - size / 8); d.setTint(android.graphics.Color.WHITE); d.draw(cv)
+                val pad = if (kind == "pulse") size / 24 else size / 8   // the pulsing icon (Motion cues) fills the tile, a smaller move than the others
+                d.setBounds(pad, pad, size - pad, size - pad); d.setTint(android.graphics.Color.WHITE); d.draw(cv)
                 qsTile?.apply { state = Tile.STATE_ACTIVE; icon = Icon.createWithBitmap(bmp); updateTile() }
                 if (i < frames) { i++; main.postDelayed(this, 40L) } else { flashing = false; then() }
             }
