@@ -258,6 +258,12 @@ jobs:
           # each app on its own (Pulse-<app>-<version>.apk) and the watch app; the Play bundle stays out (it is in the run's files, for the Play Console)
           for f in files/Pulse-*-"$VER".apk; do [ -f "$f" ] && ASSETS+=("$f"); done
           [ -f "files/PulseWatch.apk" ] && ASSETS+=("files/PulseWatch.apk")
-          gh release create "v$VER" "${ASSETS[@]}" --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
+          # a run of the same version again (a rebuild after a fix): the release that is there gets the new files and notes instead of the run failing
+          if gh release view "v$VER" >/dev/null 2>&1; then
+            gh release upload "v$VER" "${ASSETS[@]}" --clobber
+            gh release edit "v$VER" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
+          else
+            gh release create "v$VER" "${ASSETS[@]}" --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
+          fi
           # and each app to its own repository too (when APPS_TOKEN is set and the repository exists)
           if [ -n "$APPS_TOKEN" ]; then GH_TOKEN="$APPS_TOKEN" bash scripts/publish_standalone.sh "$VER"; else echo "::warning::APPS_TOKEN is not set: the apps were not sent to their own repositories"; fi
