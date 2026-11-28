@@ -956,7 +956,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         val columnsNow = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 840 && FilesPrefs.columns && !recentView && arcFile == null && resultsFor == null && !searchOpen && sel.isEmpty() && query.isBlank()
         if (columnsNow) ExColumnsPane(dir, top, showHidden, onGo = { go(it) }, onOpen = { openFile(it) }, onList = { FilesPrefs.columns = false; FilesPrefs.save(ctx) }, onMenu = { drawer = true }, filter = filtNow, onFilter = { sortMenu = true })
         else Column(Modifier.fillMaxSize().onGloballyPositioned { ExScroll.viewTop = it.positionInRoot().y }.nestedScroll(pullConn).verticalScroll(exScroll).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        if (bookmarks.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // the bookmarked folders as a row of chips above the list: off by default (it took room at the top; they are in the menu), a setting turns it on
+        if (FilesPrefs.barMarks && bookmarks.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             bookmarks.forEach { p -> PChip(here == p, if (p == top.path) "Storage" else File(p).name) { go(p) } }
         }
         // hold anywhere on the card and slide: a loading-style bar along its bottom sets the item size (left = smaller, right = larger);

@@ -869,6 +869,7 @@ object FilesPrefs {
     var ext by mutableStateOf(true)          // show file extensions
     var stdFolders by mutableStateOf(true)   // drawer: standard folders
     var bookmarks by mutableStateOf(true)    // drawer: bookmarks
+    var barMarks by mutableStateOf(false)    // the bookmarked folders as chips above the list (off by default)
     var sort by mutableStateOf(0)            // 0..5: name/size/date x asc/desc
     var previews by mutableStateOf(true)     // PDF / Office / video / audio / APK previews and type badges
     var thumbs by mutableStateOf(true)       // image thumbnails in the list
@@ -907,7 +908,7 @@ object FilesPrefs {
         val p = sp(c)
         start = p.getString("ex_start", "") ?: ""; hidden = p.getBoolean("ex_hidden", false); grid = p.getBoolean("ex_grid", false); columns = p.getBoolean("ex_columns", true); selIcons = p.getBoolean("ex_selicons", true)
         icon = p.getInt("ex_icon", 1); confirm = p.getBoolean("ex_confirm", true); ext = p.getBoolean("ex_ext", true); sort = p.getInt("ex_sort_all", 0)
-        stdFolders = p.getBoolean("ex_std", true); bookmarks = p.getBoolean("ex_bm", true)
+        stdFolders = p.getBoolean("ex_std", true); bookmarks = p.getBoolean("ex_bm", true); barMarks = p.getBoolean("ex_barmarks", false)
         thumbs = p.getBoolean("ex_thumbs", true); previews = p.getBoolean("ex_prev", true); binary = p.getBoolean("ex_bin", false); dateFmt = p.getInt("ex_datefmt", 0); folderSize = p.getBoolean("ex_fold_size", true); folderDate = p.getBoolean("ex_fold_date", true); fileSize = p.getBoolean("ex_file_size", true); fileDate = p.getBoolean("ex_file_date", true); infoCount = p.getBoolean("ex_info_count", true)
         foldersFirst = p.getBoolean("ex_ff", true); openAsk = p.getBoolean("ex_ask", false); secure = p.getBoolean("ex_secure", false); openRecent = p.getBoolean("ex_openrecent", false); storageInfo = p.getBoolean("ex_sinfo", true)
         cards = p.getBoolean("ex_cards", true); folderCards = p.getBoolean("ex_fcards", false); rowSep = p.getBoolean("ex_rowsep", false); alt = p.getBoolean("ex_alt", false); radius = p.getInt("ex_rad", 1)
@@ -917,7 +918,7 @@ object FilesPrefs {
     fun save(c: android.content.Context) {
         sp(c).edit().putStringSet("ex_lib_off", libHidden).putBoolean("ex_glass", glass).putInt("ex_glass_amt", glassAmt).apply()
         sp(c).edit().putString("ex_start", start).putBoolean("ex_hidden", hidden).putBoolean("ex_grid", grid).putBoolean("ex_columns", columns).putBoolean("ex_selicons", selIcons).putInt("ex_icon", icon)
-            .putBoolean("ex_confirm", confirm).putBoolean("ex_ext", ext).putInt("ex_sort_all", sort).putBoolean("ex_std", stdFolders).putBoolean("ex_bm", bookmarks)
+            .putBoolean("ex_confirm", confirm).putBoolean("ex_ext", ext).putInt("ex_sort_all", sort).putBoolean("ex_std", stdFolders).putBoolean("ex_bm", bookmarks).putBoolean("ex_barmarks", barMarks)
             .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_fold_size", folderSize).putBoolean("ex_fold_date", folderDate).putBoolean("ex_file_size", fileSize).putBoolean("ex_file_date", fileDate).putBoolean("ex_info_count", infoCount).putBoolean("ex_ff", foldersFirst).putBoolean("ex_rowsep", rowSep).putBoolean("ex_ask", openAsk).putBoolean("ex_secure", secure).putBoolean("ex_openrecent", openRecent).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_fcards", folderCards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).putBoolean("ex_analysis", analysis).putBoolean("ex_startbrowse", startBrowse).apply()
     }
 }
@@ -1101,6 +1102,7 @@ fun FilesSettings() {
         Sec(tr("Drawer", "Çekmece"), "bookmark") {
             SwRow(tr("Standard folders", "Standart klasörler"), "folder", fp.stdFolders, tr("DCIM, Downloads, Movies… in the menu", "DCIM, İndirilenler, Filmler… menüde")) { fp.stdFolders = it }
             SwRow(tr("Bookmarks", "Yer imleri"), "bookmark", fp.bookmarks, tr("Your saved folders in the menu", "Kayıtlı klasörlerin menüde")) { fp.bookmarks = it }
+            SwRow(tr("Bookmarks above the list", "Yer imleri listenin üstünde"), "star", fp.barMarks, tr("Your bookmarked folders as chips at the top of Browse", "Yer imli klasörlerin Gözat'ın en üstünde")) { fp.barMarks = it }
             SwRow(tr("Storage info", "Depolama bilgisi"), "disk", fp.storageInfo, tr("Used and free space in the menu", "Menüde kullanılan ve boş alan")) { fp.storageInfo = it }
             // Library: each standard folder can be shown or hidden in the menu's Library section
             Text(tr("Library", "Kütüphane"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))

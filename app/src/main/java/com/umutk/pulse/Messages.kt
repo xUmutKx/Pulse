@@ -440,7 +440,8 @@ fun MessagesScreen(back: () -> Unit) {
                 onNames = { nameOn = it; MsgPrefs.setNames(ctx, it) },
                 onUnread = { unreadFirst = it; MsgPrefs.setUnreadFirst(ctx, it) },
                 onUnblock = { a -> blocks = blocks - a; MsgPrefs.setBlocked(ctx, blocks) },
-                onUnarchive = { a -> archives = archives - a; MsgPrefs.setArchived(ctx, archives) })
+                onUnarchive = { a -> archives = archives - a; MsgPrefs.setArchived(ctx, archives) },
+                onOpenBlocked = { settings = false; blockedView = true })
             newMode -> Column(Modifier.fillMaxWidth().weight(1f)) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     PField(newTo, { newTo = it }, tr("Message to…", "Mesaj gönder…"), Modifier.weight(1f).fillMaxWidth())
@@ -493,8 +494,6 @@ fun MessagesScreen(back: () -> Unit) {
                         }
                         if (!blockedView && suspects.isNotEmpty()) Text(tr("Suspicious numbers (${suspects.size})", "Şüpheli numaralar (${suspects.size})"), color = T.accent, fontSize = 14.sp,
                             modifier = Modifier.fillMaxWidth().clickable { askSuspect = true }.padding(horizontal = 16.dp, vertical = 8.dp))
-                        if (!blockedView && blocks.isNotEmpty()) Text(tr("Blocked (${blocks.size})", "Engellenenler (${blocks.size})"), color = T.accent, fontSize = 14.sp,
-                            modifier = Modifier.fillMaxWidth().clickable { blockedView = true }.padding(horizontal = 16.dp, vertical = 8.dp))
                         // a confirmation for each suspicious number: nothing is blocked without the person's yes
                         val sus = suspects.firstOrNull()
                         if (askSuspect && sus != null) WinAlert(onDismissRequest = { askSuspect = false }, title = { Text(tr("Block this number?", "Bu numara engellensin mi?"), color = T.text) },
@@ -707,7 +706,7 @@ private fun MessagesItem(list: List<SmsMsg>, k: Int, ctx: Context) {
 @Composable
 private fun MessagesSettings(names: Boolean, unreadFirst: Boolean, blocks: Set<String>, archives: Set<String>,
                              isDefault: Boolean, onDefault: () -> Unit, notif: List<Boolean>, sig: String, onSig: (String) -> Unit, delay: Int, onDelay: (Int) -> Unit, onNotif: (Int, Boolean) -> Unit,
-                             onNames: (Boolean) -> Unit, onUnread: (Boolean) -> Unit, onUnblock: (String) -> Unit, onUnarchive: (String) -> Unit) {
+                             onNames: (Boolean) -> Unit, onUnread: (Boolean) -> Unit, onUnblock: (String) -> Unit, onUnarchive: (String) -> Unit, onOpenBlocked: () -> Unit = {}) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp).verticalScroll(rememberScrollState())) {
         Row(Modifier.fillMaxWidth().clickable(enabled = !isDefault, onClick = onDefault).padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("chat", T.text, 22.dp)
@@ -734,6 +733,7 @@ private fun MessagesSettings(names: Boolean, unreadFirst: Boolean, blocks: Set<S
         MessagesSettingRow("sort", tr("Unread first", "Okunmamış önce"), unreadFirst, onUnread)
         Text(tr("Blocked numbers", "Engellenen numaralar"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
         if (blocks.isEmpty()) Text(tr("None", "Yok"), color = T.sub, fontSize = 14.sp)
+        else PButton(tr("Read their messages", "Mesajlarını oku"), compact = true, modifier = Modifier.padding(bottom = 4.dp)) { onOpenBlocked() }
         blocks.sorted().forEach { a ->
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 PIcon("call", T.sub, 20.dp)
