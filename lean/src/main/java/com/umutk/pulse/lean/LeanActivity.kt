@@ -24,9 +24,7 @@ class LeanActivity : ComponentActivity() {
             SideEffect { T.dark = dark; window.statusBarColor = T.bg.toArgb(); window.navigationBarColor = T.bg.toArgb()
                 androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply { isAppearanceLightStatusBars = !dark; isAppearanceLightNavigationBars = !dark } }
             Box(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding()) {
-                when (BuildConfig.APP) {
-                    else -> com.umutk.pulse.extras.calculator.CalculatorHub { finish() }
-                }
+                LeanApp { finish() }
             }
         }
     }

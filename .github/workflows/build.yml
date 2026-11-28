@@ -154,8 +154,13 @@ jobs:
               # one of Pulse's apps on its own (scripts/standalone_apps.txt): the lite build with its own package and only its icon
               ID="${{ matrix.variant }}"; ID="${ID#app-}"
               # a lean app (lean/apps.txt): its own small module, a few MB (the other apps are the lite build of the whole of Pulse with one icon)
+              LEAN=""
               if grep -q "^$ID|" lean/apps.txt; then
-                G :lean:assembleRelease -PleanApp=$ID
+                # when the lean build fails the app is still built, as the lite build of the whole of Pulse (bigger), so no app is lost from the release
+                rm -rf lean/build/outputs
+                if G :lean:assembleRelease -PleanApp=$ID; then LEAN=1; else echo "::warning::lean build of $ID failed: built as the whole of Pulse instead"; grep -E '^e: ' build.log | tail -25 | while IFS= read -r l; do echo "::warning::lean $ID: ${l}"; done; fi
+              fi
+              if [ -n "$LEAN" ]; then
                 cp "$(find lean/build/outputs/apk -name '*-release.apk' | head -1)" "out/Pulse-$ID-$VER.apk"
               else
                 # Pulse AI needs the AI engines (the full flavour); every other app is built on lite

@@ -3,8 +3,13 @@ package com.umutk.pulse
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
@@ -70,3 +75,86 @@ fun PField(value: String, onChange: (String) -> Unit, hint: String, modifier: Mo
 
 /** A frame round a part of the screen: the Windows looks draw one; the lean apps draw none. */
 fun Modifier.frame(@Suppress("UNUSED_PARAMETER") t: Any?, raised: Boolean = false): Modifier = this
+
+
+// ---- the rest of the kit that the lean apps use (the same names and shapes as Pulse's) -------------------------------------------------------------------------------
+
+val pageGutter: Dp get() = 16.dp
+val pageBg: Color get() = T.bg
+
+/** The look of the window in front (the lean apps have one: the colours of T). */
+class PTheme {
+    val id: String get() = T.id
+    val text: Color get() = T.text
+    val sub: Color get() = T.sub
+    val bg: Color get() = T.bg
+    val panel: Color get() = T.panel
+    val line: Color get() = T.text.copy(alpha = .15f)
+    val accent: Color get() = Look.accent
+    val dark: Boolean get() = T.dark
+    val material: Boolean get() = true
+    val tabs: Boolean get() = false
+    val radius: Dp get() = 12.dp
+}
+val LocalWindowLook = androidx.compose.runtime.staticCompositionLocalOf { PTheme() }
+
+@Composable
+fun PButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false, icon: androidx.compose.ui.graphics.vector.ImageVector? = null, compact: Boolean = false, onClick: () -> Unit) {
+    val fg = if (danger) Color(0xFFE5484D) else T.text
+    Box(modifier.clip(RoundedCornerShape(50)).background(fg.copy(alpha = .1f)).clickable(onClick = onClick).padding(horizontal = if (compact) 12.dp else 22.dp, vertical = if (compact) 6.dp else 10.dp), contentAlignment = Alignment.Center) {
+        Text(text, color = fg, fontSize = if (compact) 12.sp else 14.sp, maxLines = 1)
+    }
+}
+
+@Composable
+fun PCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Column(modifier.clip(RoundedCornerShape(16.dp)).background(T.panel).padding(14.dp), content = content)
+}
+
+@Composable
+fun PHead(text: String, trailing: String = "", guide: String = "") {
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(text, color = T.text, fontSize = 22.sp, modifier = Modifier.weight(1f))
+        if (trailing.isNotEmpty()) Text(trailing, color = T.sub, fontSize = 13.sp)
+    }
+}
+
+@Composable
+fun PSwitch(on: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) {
+    androidx.compose.material3.Switch(on, onChange, enabled = enabled, colors = androidx.compose.material3.SwitchDefaults.colors(checkedTrackColor = Look.accent, checkedThumbColor = Color.White))
+}
+
+@Composable
+fun PCheck(on: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) {
+    androidx.compose.material3.Checkbox(on, onChange, enabled = enabled, colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = Look.accent))
+}
+
+@Composable
+fun PRadio(on: Boolean, onClick: () -> Unit) {
+    androidx.compose.material3.RadioButton(on, onClick, colors = androidx.compose.material3.RadioButtonDefaults.colors(selectedColor = Look.accent))
+}
+
+@Composable
+fun PSlider(value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float>, thick: Boolean = false, modifier: Modifier = Modifier, onDone: (() -> Unit)? = null) {
+    androidx.compose.material3.Slider(value, onChange, modifier, valueRange = range, onValueChangeFinished = onDone,
+        colors = androidx.compose.material3.SliderDefaults.colors(thumbColor = Look.accent, activeTrackColor = Look.accent))
+}
+
+@Composable
+fun PDialog(title: String, text: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit, info: Boolean = false) {
+    androidx.compose.material3.AlertDialog(onDismissRequest = onDismiss, title = { Text(title) }, text = { Text(text) },
+        confirmButton = { androidx.compose.material3.TextButton(onConfirm) { Text(confirm) } },
+        dismissButton = if (info) null else ({ androidx.compose.material3.TextButton(onDismiss) { Text(tr("Cancel", "Vazgeç")) } }),
+        containerColor = T.panel, titleContentColor = T.text, textContentColor = T.sub)
+}
+
+@Composable
+fun WinAlert(onDismissRequest: () -> Unit, title: (@Composable () -> Unit)? = null, text: (@Composable () -> Unit)? = null, confirmButton: @Composable () -> Unit, dismissButton: (@Composable () -> Unit)? = null,
+             containerColor: Color? = null, noDim: Boolean = false, warn: Boolean = false, iconKey: String? = null) {
+    androidx.compose.material3.AlertDialog(onDismissRequest = onDismissRequest, title = title, text = text, confirmButton = confirmButton, dismissButton = dismissButton,
+        containerColor = containerColor ?: T.panel, titleContentColor = T.text, textContentColor = T.sub)
+}
+
+/** Pulse's per-tool look chooser: a lean app has one look (the phone's light or dark), so these draw nothing. */
+@Composable fun ExtraLookRow(ink: Color = T.text) {}
+@Composable fun ExtraLookIcon(tint: Color = T.text) {}

@@ -1,2 +1,5 @@
-# the apps built as lean modules (a few MB: Compose and the app's own code only, no Pulse look system, no Windows looks): id|name|folders of the app's code in app/src/main/java/com/umutk/pulse
-calculator|Pulse Calculator|extras/calculator
+# the apps built as lean modules (a few MB: Compose and the app's own code only, no Pulse look system, no Windows looks): id|name|folders of the app's code in app/src/main/java/com/umutk/pulse|permissions|extra libraries (gradle notations, comma separated)
+calculator|Pulse Calculator|extras/calculator||
+tempmail|Pulse TempMail|extras/tempmail|INTERNET|
+browser|Pulse Browser|extras/browser|INTERNET|androidx.webkit:webkit:1.11.0
+voice|Pulse Voice Recorder|extras/voice|RECORD_AUDIO,READ_EXTERNAL_STORAGE|
