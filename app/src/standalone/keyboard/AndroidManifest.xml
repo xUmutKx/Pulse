@@ -17,8 +17,6 @@
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:node="remove" />
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:node="remove" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:node="remove" />
-    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" tools:node="remove" />
-    <uses-permission android:name="com.termux.permission.RUN_COMMAND" tools:node="remove" />
     <uses-permission android:name="android.permission.READ_SMS" tools:node="remove" />
     <uses-permission android:name="android.permission.SEND_SMS" tools:node="remove" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" tools:node="remove" />
@@ -36,7 +34,6 @@
         <service android:name="com.umutk.pulse.extras.notifhist.NotifHistListener" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.island.IslandListenerService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.lyrics.LyricsListenerService" tools:node="remove" />
-        <provider android:name="rikka.shizuku.ShizukuProvider" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.messages.SmsDeliverReceiver" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.messages.SmsReceivedReceiver" tools:node="remove" />
         <receiver android:name="com.android.mms.transaction.PushReceiver" tools:node="remove" />

@@ -66,8 +66,8 @@ KEEP = {  # the groups each app keeps (everything else of the lists above is tak
     "files": {"storage", "install", "packages", "shizuku", "usage"}, "photos": {"storage", "wallpaper"}, "calendar": {"calendar"}, "contacts": {"contacts", "call"},
     "messages": {"sms", "contacts"}, "music": {"storage", "bluetooth", "listen_lyrics"}, "video": {"storage", "overlay"}, "ytx": {"install"},
     "code": {"storage"}, "terminal": {"storage", "shizuku"}, "ebook": {"storage"}, "office": {"storage"}, "paint": {"storage"}, "palette": {"storage", "wallpaper"},
-    "weather": {"location"}, "voice": {"mic", "storage"}, "screenrec": {"mic", "overlay", "storage"}, "whitenoise": set(), "notes": set(), "clock": {"overlay"},
-    "keyboard": {"mic", "camera", "storage", "contacts", "a11y_keyboard", "listen_count"},
+    "weather": {"location"}, "voice": {"mic", "storage"}, "screenrec": {"mic", "overlay", "storage", "shizuku"}, "whitenoise": set(), "notes": set(), "clock": {"overlay"},
+    "keyboard": {"mic", "camera", "storage", "contacts", "a11y_keyboard", "listen_count", "shizuku"},  # shizuku: keeps Pulse Keyboard the default (ime set through root or Shizuku)
     "launcher": {"overlay", "usage", "packages", "contacts", "calendar", "storage", "listen_count", "listen_island", "secure", "dnd", "bluetooth", "location", "shizuku", "call"},
     "island": {"overlay", "listen_island", "bluetooth"}, "notifhist": {"listen_hist"}, "gamehub": {"usage", "overlay", "packages", "shizuku", "storage"},
     "health": {"activity", "location", "bluetooth"}, "localsend": {"storage", "location", "camera"}, "ai": {"mic", "storage"}, "browser": {"storage"}, "tempmail": set(),
