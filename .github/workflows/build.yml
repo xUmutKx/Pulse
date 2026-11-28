@@ -64,6 +64,8 @@ jobs:
       PULSE_KEY_PASSWORD: ${{ secrets.PULSE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
+      - name: Calls that older Androids do not have (NoSuchMethodError), missing imports
+        run: python3 -I scripts/check_api.py && python3 -I scripts/check_imports.py
       - name: Release key from the secrets (written to a temporary file, never in the repo)
         shell: bash
         env:

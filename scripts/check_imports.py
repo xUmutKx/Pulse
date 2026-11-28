@@ -46,4 +46,6 @@ for path in sorted(ROOT.rglob("*.kt")):
 for p in problems:
     print(p)
 print(f"{len(problems)} problem(s) found")
-sys.exit(1 if problems else 0)
+import subprocess
+api = subprocess.run([sys.executable, str(pathlib.Path(__file__).with_name("check_api.py"))]).returncode  # calls missing on older Androids
+sys.exit(1 if problems or api else 0)

@@ -34,3 +34,16 @@ object Compat {
 var android.service.quicksettings.Tile.subtitleCompat: CharSequence?
     @androidx.annotation.RequiresApi(24) get() = if (Build.VERSION.SDK_INT >= 29) subtitle else null
     @androidx.annotation.RequiresApi(24) set(v) { if (Build.VERSION.SDK_INT >= 29) subtitle = v }
+
+/** InputStream.readNBytes is Java 11 (Android 13+ only; older phones crash with NoSuchMethodError): reads up to [n] bytes the old way. */
+fun java.io.InputStream.readUpTo(n: Int): ByteArray {
+    val out = java.io.ByteArrayOutputStream(minOf(n, 64 * 1024))
+    val buf = ByteArray(8192)
+    var left = n
+    while (left > 0) {
+        val r = read(buf, 0, minOf(buf.size, left))
+        if (r < 0) break
+        out.write(buf, 0, r); left -= r
+    }
+    return out.toByteArray()
+}

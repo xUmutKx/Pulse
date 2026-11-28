@@ -1,5 +1,6 @@
 package com.umutk.pulse.features
 
+import com.umutk.pulse.readUpTo
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import android.content.ClipData
@@ -2395,7 +2396,7 @@ private fun FileViewer(f: File, onOpen: (File) -> Unit, onDismiss: () -> Unit) {
         if (ext in IMAGE_EXT) runCatching { android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 }) }.getOrNull()?.asImageBitmap() else null
     }
     val text = remember(f) {
-        if (image == null && ext in TEXT_EXT) runCatching { f.inputStream().use { String(it.readNBytes(200_000)) } }.getOrNull() else null
+        if (image == null && ext in TEXT_EXT) runCatching { f.inputStream().use { String(it.readUpTo(200_000)) } }.getOrNull() else null
     }
     val editable = text != null && f.length() <= 200_000L
     var editing by remember(f) { mutableStateOf(false) }
@@ -2528,7 +2529,7 @@ private fun ExBinViewer(f: File, onClose: () -> Unit) {
 /** The lines of the binary view: the header (for a .dex: its version and the counts), the readable text inside (up to 3000), the hex of the first 4 KB. */
 private fun binInfo(f: File): List<String> {
     val out = ArrayList<String>()
-    val bytes = runCatching { f.inputStream().use { it.readNBytes(8 * 1024 * 1024) } }.getOrDefault(ByteArray(0))
+    val bytes = runCatching { f.inputStream().use { it.readUpTo(8 * 1024 * 1024) } }.getOrDefault(ByteArray(0))
     fun le(o: Int): Long = if (o + 4 <= bytes.size) ((bytes[o].toLong() and 0xff) or ((bytes[o + 1].toLong() and 0xff) shl 8) or ((bytes[o + 2].toLong() and 0xff) shl 16) or ((bytes[o + 3].toLong() and 0xff) shl 24)) else 0L
     out += "# " + tr("File", "Dosya") + ": " + f.name + "  ·  " + exSize(f.length())
     if (bytes.size >= 8 && String(bytes, 0, 4, Charsets.US_ASCII) == "dex\n") {

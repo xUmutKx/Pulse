@@ -1,5 +1,6 @@
 package com.umutk.pulse.features
 
+import com.umutk.pulse.readUpTo
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +40,7 @@ object LinkFinder {
                 // a file, an attachment or any non-page answer is downloaded as it is
                 if (!type.contains("text/html") && !type.contains("xhtml") || disp.contains("attachment") || ext(c.url.toString()) in FILE_EXT) return@withContext Result.Direct
                 val base = c.url
-                val html = c.inputStream.use { it.readNBytes(1_500_000).toString(Charsets.UTF_8) }
+                val html = c.inputStream.use { it.readUpTo(1_500_000).toString(Charsets.UTF_8) }
                 val seen = LinkedHashSet<String>()
                 fun take(raw: String) {
                     val r = raw.trim().replace("&amp;", "&").replace("\\/", "/")

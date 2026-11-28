@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.gamehub
 
+import com.umutk.pulse.readUpTo
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -57,7 +58,7 @@ internal object ArtFetch {
         (java.net.URL(url).openConnection() as java.net.HttpURLConnection).run {
             connectTimeout = 8000; readTimeout = 12000
             setRequestProperty("User-Agent", "Pulse/1.0")
-            try { if (responseCode != 200) return@runCatching null; inputStream.use { i -> i.readNBytes(max + 1).takeIf { it.size <= max } } } finally { disconnect() }
+            try { if (responseCode != 200) return@runCatching null; inputStream.use { i -> i.readUpTo(max + 1).takeIf { it.size <= max } } } finally { disconnect() }
         }
     }.getOrNull()
 
