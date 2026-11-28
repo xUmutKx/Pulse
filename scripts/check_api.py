@@ -17,6 +17,8 @@ BAD = {
     r"\.lines\(\)\.(toList|collect)": "String.lines() stream (Android 11+): use lines() Kotlin ext (no stream)",
     r"\bOptional\w*\.isEmpty\(": "Optional.isEmpty (Android 11+)",
     r"\.orElseThrow\(\)": "Optional.orElseThrow() (Android 10+)",
+    r"\.(setColorStateList|setViewLayoutWidth|setViewLayoutHeight|setViewLayoutMargin|setCompoundButtonChecked|setRadialGradient|setOnCheckedChangeResponse)\(": "RemoteViews method of Android 12+ (a widget crashed on Android 10): use tintList / layoutWidth / layoutHeight from Compat.kt, or guard it with Build.VERSION and '// api-ok'",
+    r"\bsetColorStateList\(": "RemoteViews.setColorStateList (Android 12+): use tintList() from Compat.kt",
     r"\.toArray\(\w+\[\]::new\)": "Collection.toArray(IntFunction) (Android 13+)",
 }
 problems = []

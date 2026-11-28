@@ -1,5 +1,8 @@
 package com.umutk.pulse.widgets.music
 
+import com.umutk.pulse.tintList
+import com.umutk.pulse.layoutWidth
+import com.umutk.pulse.layoutHeight
 import com.umutk.pulse.extras.music.artistFor
 import com.umutk.pulse.extras.music.shownArtist
 
@@ -129,15 +132,15 @@ open class MusicWidget : AppWidgetProvider() {
                 setTextColor(R.id.mw_title, text); setTextColor(R.id.mw_artist, sub)
                 if (th != null) {
                     setInt(R.id.mw_root, "setBackgroundResource", when (th.shape) { WidgetShape.ROUND -> R.drawable.widget_music_bg; WidgetShape.SHARP -> R.drawable.widget_music_bg_sharp; WidgetShape.PILL -> R.drawable.widget_music_bg_pill; WidgetShape.BEVEL -> R.drawable.widget_music_bg_w95 })
-                    setColorStateList(R.id.mw_root, "setBackgroundTintList", if (th.shape == WidgetShape.BEVEL) null else ColorStateList.valueOf(th.bg))
-                    setColorStateList(R.id.mw_play, "setBackgroundTintList", ColorStateList.valueOf(th.accent))
-                    if (layout != R.layout.widget_music_slim) setColorStateList(R.id.mw_art, "setBackgroundTintList", ColorStateList.valueOf(th.accent and 0x00FFFFFF or 0x55000000))
+                    tintList(R.id.mw_root, "setBackgroundTintList", if (th.shape == WidgetShape.BEVEL) null else ColorStateList.valueOf(th.bg))
+                    tintList(R.id.mw_play, "setBackgroundTintList", ColorStateList.valueOf(th.accent))
+                    if (layout != R.layout.widget_music_slim) tintList(R.id.mw_art, "setBackgroundTintList", ColorStateList.valueOf(th.accent and 0x00FFFFFF or 0x55000000))
                 }
                 // background opacity picked in the widget's settings (100 = solid, 0 = see-through)
                 val alpha = prefs(c).getInt("alpha_$id", 100)
                 if (alpha < 100 && th?.shape != WidgetShape.BEVEL) {
                     val bg = th?.bg ?: if (WidgetUi.dark(c)) 0xFF2B2930.toInt() else 0xFFF3EDF7.toInt()
-                    setColorStateList(R.id.mw_root, "setBackgroundTintList", ColorStateList.valueOf((bg and 0x00FFFFFF) or ((alpha * 255 / 100) shl 24)))
+                    tintList(R.id.mw_root, "setBackgroundTintList", ColorStateList.valueOf((bg and 0x00FFFFFF) or ((alpha * 255 / 100) shl 24)))
                 }
                 // the looks picked in the widget's settings: shape, text size, cover (shown, size, side), what else is shown, accent colour
                 val o = WidgetOptions.of(c, id)
@@ -147,7 +150,7 @@ open class MusicWidget : AppWidgetProvider() {
                     "sharp" -> setInt(R.id.mw_root, "setBackgroundResource", R.drawable.widget_music_bg_sharp)
                     "pill" -> setInt(R.id.mw_root, "setBackgroundResource", R.drawable.widget_music_bg_pill)
                 }
-                if (o.accent != 0) { setColorStateList(R.id.mw_play, "setBackgroundTintList", ColorStateList.valueOf(o.accent)); setProgressBar(R.id.mw_prog, 1000, prog, false) }
+                if (o.accent != 0) { tintList(R.id.mw_play, "setBackgroundTintList", ColorStateList.valueOf(o.accent)); setProgressBar(R.id.mw_prog, 1000, prog, false) }
                 val base = when (layout) { R.layout.widget_music_big -> 20f; R.layout.widget_music_tall, R.layout.widget_music_square -> 16f; else -> 14f }
                 setTextViewTextSize(R.id.mw_title, android.util.TypedValue.COMPLEX_UNIT_SP, base * o.text / 100f)
                 setTextViewTextSize(R.id.mw_artist, android.util.TypedValue.COMPLEX_UNIT_SP, (base - 2f) * o.text / 100f)
@@ -155,7 +158,7 @@ open class MusicWidget : AppWidgetProvider() {
                     if (!o.art) setViewVisibility(R.id.mw_art, View.GONE)
                     else if (layout == R.layout.widget_music_row || layout == R.layout.widget_music_tall) {
                         val side = (if (layout == R.layout.widget_music_row) 56f else 72f) * o.artSize / 100f
-                        setViewLayoutWidth(R.id.mw_art, side, android.util.TypedValue.COMPLEX_UNIT_DIP); setViewLayoutHeight(R.id.mw_art, side, android.util.TypedValue.COMPLEX_UNIT_DIP)
+                        layoutWidth(R.id.mw_art, side, android.util.TypedValue.COMPLEX_UNIT_DIP); layoutHeight(R.id.mw_art, side, android.util.TypedValue.COMPLEX_UNIT_DIP)
                     }
                 }
                 // the cover on the right: the row is laid out right to left

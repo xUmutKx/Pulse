@@ -1,5 +1,6 @@
 package com.umutk.pulse.widgets.music
 
+import com.umutk.pulse.tintList
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -50,7 +51,7 @@ class LyricsWidget : AppWidgetProvider() {
                         WidgetShape.PILL -> R.drawable.widget_music_bg_pill
                         WidgetShape.BEVEL -> R.drawable.widget_music_bg_w95
                     })
-                    setColorStateList(R.id.lw_root, "setBackgroundTintList", if (th.shape == WidgetShape.BEVEL) null else ColorStateList.valueOf(th.bg))
+                    tintList(R.id.lw_root, "setBackgroundTintList", if (th.shape == WidgetShape.BEVEL) null else ColorStateList.valueOf(th.bg))
                 }
                 setOnClickPendingIntent(R.id.lw_root, WidgetUi.launch(c, "com.umutk.pulse.ToolOpenActivity", 81, "route" to "music"))
             }

@@ -47,3 +47,14 @@ fun java.io.InputStream.readUpTo(n: Int): ByteArray {
     }
     return out.toByteArray()
 }
+
+/**
+ * RemoteViews.setColorStateList, setViewLayoutWidth and setViewLayoutHeight are Android 12+ (an older phone crashed with NoSuchMethodError in a widget's onUpdate).
+ * Before Android 12 a background tint becomes the plain colour, a progress tint and a layout size are left as the layout has them.
+ */
+fun android.widget.RemoteViews.tintList(viewId: Int, method: String, csl: android.content.res.ColorStateList?) {
+    if (android.os.Build.VERSION.SDK_INT >= 31) { setColorStateList(viewId, method, csl); return }  // api-ok
+    if (csl != null && method == "setBackgroundTintList") setInt(viewId, "setBackgroundColor", csl.defaultColor)
+}
+fun android.widget.RemoteViews.layoutWidth(viewId: Int, size: Float, unit: Int) { if (android.os.Build.VERSION.SDK_INT >= 31) setViewLayoutWidth(viewId, size, unit) }  // api-ok
+fun android.widget.RemoteViews.layoutHeight(viewId: Int, size: Float, unit: Int) { if (android.os.Build.VERSION.SDK_INT >= 31) setViewLayoutHeight(viewId, size, unit) }  // api-ok

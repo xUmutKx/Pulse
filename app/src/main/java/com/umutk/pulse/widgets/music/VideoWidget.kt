@@ -1,5 +1,6 @@
 package com.umutk.pulse.widgets.music
 
+import com.umutk.pulse.tintList
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -52,13 +53,13 @@ class VideoWidget : AppWidgetProvider() {
                 setTextViewText(R.id.vw_title, name ?: "Pulse Video")
                 setTextViewText(R.id.vw_time, if (last != null && last.durMs > 0) "${clock(last.posMs)} / ${clock(last.durMs)}" else "")
                 setInt(R.id.vw_root, "setBackgroundResource", if (look.square) R.drawable.widget_video_bg_sq else R.drawable.widget_video_bg_round)
-                setColorStateList(R.id.vw_root, "setBackgroundTintList", ColorStateList.valueOf(p.bg.toInt()))
-                setColorStateList(R.id.vw_resume, "setBackgroundTintList", ColorStateList.valueOf(p.accent.toInt()))
+                tintList(R.id.vw_root, "setBackgroundTintList", ColorStateList.valueOf(p.bg.toInt()))
+                tintList(R.id.vw_resume, "setBackgroundTintList", ColorStateList.valueOf(p.accent.toInt()))
                 setTextColor(R.id.vw_title, p.fg.toInt()); setTextColor(R.id.vw_time, p.sub.toInt())
                 if (thumb != null) setImageViewBitmap(R.id.vw_thumb, WidgetUi.shrink(thumb, 320))
                 val prog = if (last != null && last.durMs > 0) (last.posMs * 1000 / last.durMs).toInt().coerceIn(0, 1000) else 0
                 setProgressBar(R.id.vw_prog, 1000, prog, false)
-                setColorStateList(R.id.vw_prog, "setProgressTintList", ColorStateList.valueOf(p.accent.toInt()))
+                tintList(R.id.vw_prog, "setProgressTintList", ColorStateList.valueOf(p.accent.toInt()))
                 setInt(R.id.vw_resume, "setColorFilter", if (p.light) android.graphics.Color.WHITE else p.bg.toInt()); setInt(R.id.vw_lib, "setColorFilter", p.fg.toInt())
                 setOnClickPendingIntent(R.id.vw_resume, if (last != null) WidgetUi.launch(c, "com.umutk.pulse.ExtraToolActivity", 81, "route" to "video", "resume_video" to last.uri) else WidgetUi.launch(c, "com.umutk.pulse.ExtraToolActivity", 82, "route" to "video"))
                 setOnClickPendingIntent(R.id.vw_thumb, WidgetUi.launch(c, "com.umutk.pulse.ExtraToolActivity", 82, "route" to "video"))
