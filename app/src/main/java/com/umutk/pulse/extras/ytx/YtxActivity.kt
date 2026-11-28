@@ -141,6 +141,7 @@ class YtxActivity : ComponentActivity() {
         YTXTubeApplication.init(this)
         YtxPerf.load(this)
         super.onCreate(savedInstanceState)
+        if (com.umutk.pulse.StandaloneSetup.gate(this)) return
         enableEdgeToEdge()
         setHighestRefreshRate()
         enableHdrOutput()

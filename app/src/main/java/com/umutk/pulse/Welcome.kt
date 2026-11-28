@@ -136,7 +136,7 @@ fun Welcome(onDone: () -> Unit) {
 }
 
 @Composable
-private fun WelcomeCard(title: String, content: @Composable () -> Unit) {
+internal fun WelcomeCard(title: String, content: @Composable () -> Unit) {
     PCard(Modifier.fillMaxWidth().padding(top = 14.dp)) {
         Text(title, color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         content()
@@ -144,7 +144,7 @@ private fun WelcomeCard(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun WelcomeLine(text: String) {
+internal fun WelcomeLine(text: String) {
     Text("•  $text", color = T.text, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
 }
 

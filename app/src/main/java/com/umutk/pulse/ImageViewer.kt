@@ -133,6 +133,7 @@ class ImageViewActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (com.umutk.pulse.StandaloneSetup.gate(this)) return
         Cfg.load(this); Opt.load(this); PhotosPrefs.load(this); PhotosPrefs.apply()
         @Suppress("DEPRECATION") overridePendingTransition(0, 0); paintPhotos()
         WindowCompat.setDecorFitsSystemWindows(window, false)

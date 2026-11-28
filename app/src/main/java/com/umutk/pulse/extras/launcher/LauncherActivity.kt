@@ -89,6 +89,7 @@ import com.umutk.pulse.PIcon
 class LauncherActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (com.umutk.pulse.StandaloneSetup.gate(this)) return
         Cfg.load(this); Opt.load(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         // rounded corners are not part of the Compose insets, so the side inset is read from the window insets here

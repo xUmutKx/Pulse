@@ -179,6 +179,8 @@ open class ExtraToolActivity : ComponentActivity() {
     private var glass = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // the first start of a standalone app: its own setup screen comes first
+        if (this::class == ExtraToolActivity::class && com.umutk.pulse.Standalone.on && !com.umutk.pulse.StandaloneSetup.done(this)) { super.onCreate(savedInstanceState); com.umutk.pulse.StandaloneSetup.gate(this); return }
         if (this::class == ExtraToolActivity::class && intent.getStringExtra("frame") == null) {
             val r0 = routeOf(intent)
             // a look handed over by the launcher (the look that is on there) wins over the app's own saved one for this start

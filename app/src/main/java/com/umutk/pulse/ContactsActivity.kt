@@ -12,6 +12,7 @@ import androidx.core.view.WindowCompat
 class ContactsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (com.umutk.pulse.StandaloneSetup.gate(this)) return
         Cfg.load(this); Opt.load(this)
         CtPrefs.load(this); CtPrefs.apply()
         WindowCompat.setDecorFitsSystemWindows(window, false)

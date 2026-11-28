@@ -3732,5 +3732,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <!-- the first-start setup of one of Pulse's apps on its own: asks only for what that app needs (see StandaloneSetup.kt) -->
+        <activity android:name=".StandaloneSetupActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
     </application>
 </manifest>

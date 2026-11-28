@@ -89,6 +89,7 @@ object Cfg {
 open class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (com.umutk.pulse.StandaloneSetup.gate(this)) return
         // the system's own start screen stays until Pulse has composed its first frame (up to 2.5 s): the first draw waits, so there is no blank window in between
         if (this !is FilesActivity) run {
             val t0 = android.os.SystemClock.uptimeMillis()

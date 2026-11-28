@@ -47,6 +47,7 @@ import java.time.LocalDateTime
 class CalendarActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (com.umutk.pulse.StandaloneSetup.gate(this)) return
         Cfg.load(this); Opt.load(this)
         CalPrefs.load(this); CalPrefs.apply()
         @Suppress("DEPRECATION") overridePendingTransition(0, 0) // standalone start: no open animation
