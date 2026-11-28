@@ -11,3 +11,6 @@ include(":app")
 // Pulse AI's engines (llama.cpp and whisper.cpp, arm64): the workflow fetches their sources into localai/vendor first
 include(":localai")
 include(":aistt")
+
+// the lean apps of Pulse (a few MB each, see lean/apps.txt)
+include(":lean")

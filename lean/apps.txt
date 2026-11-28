@@ -1,0 +1,2 @@
+# the apps built as lean modules (a few MB: Compose and the app's own code only, no Pulse look system, no Windows looks): id|name|folders of the app's code in app/src/main/java/com/umutk/pulse
+calculator|Pulse Calculator|extras/calculator

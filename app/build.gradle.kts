@@ -53,6 +53,14 @@ android {
     defaultConfig.buildConfigField("String", "STANDALONE_ALIAS", "\"" + pulseAlias + "\"")
     if (pulseApp != null) {
         defaultConfig.applicationIdSuffix = ".$pulseApp"
+        // what an app does not use stays out of its APK: the assets and the native libraries of the other apps (the packs a look or an app needs are downloaded when it is used)
+        val assetOwners = mapOf("boxshelf" to listOf("gamehub"), "cases" to listOf("gamehub"), "mega" to listOf("gamehub"), "megacovers" to listOf("gamehub"), "kb" to listOf("keyboard"), "kbd" to listOf("keyboard"),
+            "artcraft" to listOf<String>(), "textmate" to listOf("code"), "wmskins" to listOf("music"), "skins" to listOf("music"), "photoai" to listOf("photos"),
+            "debloat" to listOf("core", "launcher"), "guide" to listOf("core", "launcher"))
+        val skipAssets = assetOwners.filter { pulseApp !in it.value }.keys
+        if (skipAssets.isNotEmpty()) android.androidResources.ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~" + skipAssets.joinToString("") { ":!$it" }
+        val libOwners = mapOf("libpulse_shelf.so" to listOf("gamehub"), "libtensorflowlite_jni.so" to listOf("photos"), "libpulse_lm.so" to listOf("keyboard"), "libpulse_search.so" to listOf("files", "launcher"))
+        libOwners.filter { pulseApp !in it.value }.keys.forEach { packaging.jniLibs.excludes += "**/$it" }
         // lite for every app; Pulse AI is built from the full flavour (it needs the AI engines)
         for (fl in listOf("lite", "full")) {
             sourceSets.getByName(fl).manifest.srcFile("src/standalone/$pulseApp/AndroidManifest.xml")

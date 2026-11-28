@@ -76,6 +76,44 @@ KEEP = {  # the groups each app keeps (everything else of the lists above is tak
     "core": ALL_SENSITIVE - {"sms", "call", "contacts", "calendar"},
 }
 
+# ---- the components of the other apps ------------------------------------------------------------------------------------------------------------------------------
+# An app on its own has only its own launcher entries and the components of its own folders in its manifest: the code and the pictures that only the others used
+# are then no longer kept by the manifest, and the shrinker can drop them.
+ALIAS_OF = {i: alias for i, alias, name in apps if i not in ("core", "launcher")}
+PKG_OWNER = {}
+for i in [a[0] for a in apps]:
+    for part in SRC.get(i, "").split(","):
+        m = re.search(r"/extras/([a-z0-9]+)$", part)
+        if m: PKG_OWNER[m.group(1)] = i
+CLASS_OWNER = {"CalendarActivity": "calendar", "ContactsActivity": "contacts", "ImageViewActivity": "photos", "FilesActivity": "files"}
+def owner_of(tag, name):
+    base = name.split(".")[-1]
+    if tag == "activity-alias":
+        for i, alias in ALIAS_OF.items():
+            if base.endswith(alias): return i
+        if base == "ArtCraftLauncher" or base.endswith("ArtCraftLauncher"): return "artcraft"
+        return None
+    m = re.match(r"com\.umutk\.pulse\.extras\.([a-z0-9]+)\.", name)
+    if m and m.group(1) in PKG_OWNER: return PKG_OWNER[m.group(1)]
+    if name.startswith("com.umutk.pulse.extras.launcher."): return "launcher"
+    if "Weather" in base and "extras" not in name: return "weather"
+    return CLASS_OWNER.get(base)
+ALL_COMPONENTS = []
+for tag in ("activity", "activity-alias", "service", "receiver", "provider"):
+    for e in doc.getElementsByTagName(tag):
+        n = e.getAttributeNS(A, "name")
+        if n: ALL_COMPONENTS.append((tag, "com.umutk.pulse" + n if n.startswith(".") else n))
+
+def others(i, already):
+    out = ""
+    for tag, n in ALL_COMPONENTS:
+        o = owner_of(tag, n)
+        if o is None or n in already: continue
+        # Pulse Core keeps no app of its own; an app keeps its own components; the launcher app keeps its own folder
+        if i == "core" or o != i:
+            out += f'        <{tag} android:name="{n}" tools:node="remove" />\n'
+    return out
+
 def trimmed(i):
     keep = KEEP.get(i, ALL_SENSITIVE)
     out = ""
@@ -86,6 +124,8 @@ def trimmed(i):
     for g in sorted(ALL_SENSITIVE - keep):
         for tag, n in COMPONENTS.get(g, []):
             comps += f'        <{tag} android:name="{n}" tools:node="remove" />\n'
+    already = {n for g in ALL_SENSITIVE - keep for _, n in COMPONENTS.get(g, [])}
+    comps += others(i, already)
     return out, comps
 
 shutil.rmtree("app/src/standalone", ignore_errors=True)

@@ -153,10 +153,16 @@ jobs:
             app-*)
               # one of Pulse's apps on its own (scripts/standalone_apps.txt): the lite build with its own package and only its icon
               ID="${{ matrix.variant }}"; ID="${ID#app-}"
-              # Pulse AI needs the AI engines (the full flavour); every other app is built on lite
-              if [ "$ID" = "ai" ]; then FL=Full; else FL=Lite; fi
-              G assembleFoss${FL}Release -PpulseApp=$ID -x lintVitalAnalyzeFoss${FL}Release -x lintVitalReportFoss${FL}Release -x lintVitalFoss${FL}Release
-              cp "$(find app/build/outputs/apk -name '*-release.apk' | head -1)" "out/Pulse-$ID-$VER.apk" ;;
+              # a lean app (lean/apps.txt): its own small module, a few MB (the other apps are the lite build of the whole of Pulse with one icon)
+              if grep -q "^$ID|" lean/apps.txt; then
+                G :lean:assembleRelease -PleanApp=$ID
+                cp "$(find lean/build/outputs/apk -name '*-release.apk' | head -1)" "out/Pulse-$ID-$VER.apk"
+              else
+                # Pulse AI needs the AI engines (the full flavour); every other app is built on lite
+                if [ "$ID" = "ai" ]; then FL=Full; else FL=Lite; fi
+                G assembleFoss${FL}Release -PpulseApp=$ID -x lintVitalAnalyzeFoss${FL}Release -x lintVitalReportFoss${FL}Release -x lintVitalFoss${FL}Release
+                cp "$(find app/build/outputs/apk -name '*-release.apk' | head -1)" "out/Pulse-$ID-$VER.apk"
+              fi ;;
             mini)
               # the safe app: lite without root or Shizuku, SMS, accessibility services, APK installs or call log (what app scanners flag)
               G assembleFossMiniRelease -x lintVitalAnalyzeFossMiniRelease -x lintVitalReportFossMiniRelease -x lintVitalFossMiniRelease
