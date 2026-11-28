@@ -455,7 +455,10 @@ fun LookHost(transparent: Boolean = false, lookId: String? = null, content: @Com
     SideEffect { WindowCompat.getInsetsController((view.context as android.app.Activity).window, view).apply { isAppearanceLightStatusBars = !th.dark; isAppearanceLightNavigationBars = !th.dark } }
     SideEffect { val w = (view.context as android.app.Activity).window; if (Opt.keepOn) w.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     val dens = androidx.compose.ui.platform.LocalDensity.current
-    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens.density, dens.fontScale * Opt.fontScale), LocalWindowLook provides wl) {
+    // a text field asks the clipboard if it can paste while the accessibility service reads the screen; a phone that denies the app the clipboard (Samsung, Android 17) threw
+    // SecurityException there and ended the app: the clipboard the fields see answers "nothing to paste" instead
+    val safeClip = androidx.compose.ui.platform.LocalClipboardManager.current.let { c -> remember(c) { SafeClipboard(c) } }
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens.density, dens.fontScale * Opt.fontScale), LocalWindowLook provides wl, androidx.compose.ui.platform.LocalClipboardManager provides safeClip) {
         MaterialTheme(colorScheme = cs) {
             // liquid glass: the wallpaper (or the theme's backdrop) is blurred behind the glass panels
             // the installer window (transparent): nothing is drawn behind it, the app behind shows through
@@ -933,3 +936,10 @@ internal fun android.app.Activity.paintWindow(dark: Boolean, amoled: Boolean, th
 
 /** While a page that must not be squeezed by the keyboard is open (Game Hub's 3D shelf: a resize on every frame of the keyboard's slide froze it), the keyboard lays over the page. */
 object ImeFree { var on by androidx.compose.runtime.mutableStateOf(false) }
+
+
+/** The clipboard of the text fields, safe against a phone that denies the app the clipboard: reading it then answers "empty" instead of throwing. */
+class SafeClipboard(private val d: androidx.compose.ui.platform.ClipboardManager) : androidx.compose.ui.platform.ClipboardManager by d {
+    override fun hasText(): Boolean = try { d.hasText() } catch (_: SecurityException) { false }
+    override fun getText(): androidx.compose.ui.text.AnnotatedString? = try { d.getText() } catch (_: SecurityException) { null }
+}
