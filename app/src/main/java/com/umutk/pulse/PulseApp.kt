@@ -41,6 +41,16 @@ class PulseApp : Application(), androidx.work.Configuration.Provider, coil.Image
         }
         // a crash is written to Download/Pulse/crash.txt, so it can be read on the phone
         CrashSaver.install(this)
+        // an app on its own has none of Pulse Core's background work (DNS watching, the App manager list, packs, ads, the update folder ...): a constant, so none of that code is in the app
+        if (BuildConfig.SOLO) {
+            val main = runCatching { Application.getProcessName() == packageName }.getOrDefault(true)
+            // the apps that run services Android may mark "Not working" repair them, and Nearby sharing stays visible for LocalSend
+            if (main && BuildConfig.STANDALONE in setOf("keyboard", "blackout", "launcher")) runCatching { com.umutk.pulse.features.A11yRepair.schedule(this) }
+            if (main && BuildConfig.STANDALONE == "localsend") runCatching { com.umutk.pulse.extras.localsend.LocalSendEngine.keepAlive(this) }
+            if (BuildConfig.STANDALONE == "music") CoroutineScope(Dispatchers.IO).launch { LyricsMigrate.run(this@PulseApp) }
+            PerfLog.init(this)
+            return
+        }
         // the APKs of Pulse's own updates that stayed in Download/Pulse/Updates and are not newer than this version are deleted (an old one was left there); nothing is downloaded by itself
         if (Application.getProcessName() == packageName) Thread {
             runCatching {

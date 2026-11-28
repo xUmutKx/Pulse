@@ -51,6 +51,8 @@ android {
     val pulseAlias = pulseApp?.let { id -> rootProject.file("scripts/standalone_apps.txt").readLines().map { it.split("|") }.firstOrNull { it.size > 1 && it[0] == id }?.get(1) } ?: ""
     defaultConfig.buildConfigField("String", "STANDALONE", "\"" + (pulseApp ?: "") + "\"")
     defaultConfig.buildConfigField("String", "STANDALONE_ALIAS", "\"" + pulseAlias + "\"")
+    // an app on its own (not Pulse Core): a constant, so the shrinker removes the code of Pulse Core's background work from it (PulseApp)
+    defaultConfig.buildConfigField("boolean", "SOLO", if (pulseApp != null && pulseApp != "core") "true" else "false")
     if (pulseApp != null) {
         defaultConfig.applicationIdSuffix = ".$pulseApp"
         // what an app does not use stays out of its APK: the assets and the native libraries of the other apps (the packs a look or an app needs are downloaded when it is used)

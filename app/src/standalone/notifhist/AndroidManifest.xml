@@ -51,26 +51,67 @@
         <receiver android:name="com.umutk.pulse.extras.messages.SmsReceivedReceiver" tools:node="remove" />
         <receiver android:name="com.android.mms.transaction.PushReceiver" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.messages.MmsInReceiver" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.features.PlayLinkActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.MainActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.FilePickActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.FilesActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.CalendarActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.ContactsActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.ArtCraftActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.features.InstallActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.ImageViewActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.OfficeTextActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.OfficeViewActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.ytx.YtxActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.lucid.MainActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.lucid.AlarmRingingActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.widgets.WidgetConfigActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.notes.NotesEntryActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.extras.stickynote.StickyQuickActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.extras.stickynote.StickyNoteActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.widgets.PhotoWidgetConfig" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.features.ShareDownloadActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.FramedToolActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.features.SaveToActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.screenrec.ScreenRecActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.extras.colorpick.ColorPickActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.extras.share.ShareTargetActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.features.AutofillAuthActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.keyboard.ScanTextActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.ads.AdGateActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.keyboard.KeyboardFloatActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.ToolOpenActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.applock.LockActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.applock.AppLockAuthActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.music.widgets.PowerampWidgetConfig" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.gamehub.MegaGameActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.gamehub.HtmlGameActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.widgets.music.VideoWidgetConfig" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.widgets.music.WinampWidgetConfig" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.gamehub.GameLaunch" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.PulsePickActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.YtxSeriesActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.messages.MsgComposeActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.messages.MsgBubbleActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.KeyboardSettingsActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.extras.spotify.SpotifyAuthActivity" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.widgets.music.MusicWidgetConfig" tools:node="remove" />
+        <activity android:name="com.umutk.pulse.features.CollapseActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.launcher.LauncherActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.launcher.LauncherSettingsActivity" tools:node="remove" />
         <activity android:name="com.umutk.pulse.extras.keyboard.AsciiMakerActivity" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconDefault" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconGlass" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconGlassPurple" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconGlassPink" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconGlassCyan" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconGlassGreen" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconGlassAmber" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconWin95" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconXp" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconWin7" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconWin10" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconWin11" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.FilesLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassFilesLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassPurpleFilesLauncher" tools:node="remove" />
@@ -177,6 +218,7 @@
         <activity-alias android:name="com.umutk.pulse.GlassCyanOfficeLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassGreenOfficeLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassAmberOfficeLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.CodeOpenActivity" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.CodeLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassCodeLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassNavyCodeLauncher" tools:node="remove" />
@@ -294,6 +336,8 @@
         <activity-alias android:name="com.umutk.pulse.GlassCyanBlackOutLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassGreenBlackOutLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassAmberBlackOutLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconGlassNavy" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.IconGlassSky" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassNavyFilesLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassSkyFilesLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassNavyCalendarLauncher" tools:node="remove" />
@@ -356,20 +400,34 @@
         <service android:name="com.umutk.pulse.extras.lucid.service.AlarmAudioService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.lucid.service.TimerService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.lucid.service.StopwatchService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.features.DownloadService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.lyrics.LyricsBatchService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.ai.AiBuddyService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.music.CoverRepairService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.gamehub.CoverService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.features.ZipService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.features.FileOpService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.relay.RelayService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.features.TermService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.features.InstallService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.MonitorService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.features.CoverService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.colorpick.ColorPickTile" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecTile" tools:node="remove" />
+        <service android:name="com.umutk.pulse.features.PulseAutofillService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.keyboard.KeyboardTile" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.localsend.LocalSendTile" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.watchdog.MusicPlaybackService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.watchdog.VideoPlaybackService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.watchdog.AmbientPlaybackService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.video.VideoSessionService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.music.MusicPlaybackService" tools:node="remove" />
         <service android:name="com.umutk.pulse.PulseTile" tools:node="remove" />
         <service android:name="com.umutk.pulse.features.AutoClickTile" tools:node="remove" />
         <service android:name="com.umutk.pulse.ToolkitTile" tools:node="remove" />
         <service android:name="com.umutk.pulse.features.DnsTile" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.buds.BudsService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.speedtest.SpeedTestTile" tools:node="remove" />
         <service android:name="com.umutk.pulse.features.CoverTile" tools:node="remove" />
         <service android:name="com.umutk.pulse.FlashlightTile" tools:node="remove" />
@@ -400,13 +458,18 @@
         <service android:name="com.umutk.pulse.PointerTile" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.gamehub.GameMenuService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.gamehub.GameRehideService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.features.watch.WatchLinkService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.island.IslandService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.MotionCueService" tools:node="remove" />
         <service android:name="com.umutk.pulse.MotionCueTile" tools:node="remove" />
         <service android:name="com.umutk.pulse.PowerMenuTile" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.watchdog.LastPlayedToggleTile" tools:node="remove" />
         <service android:name="com.umutk.pulse.DinkTile" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.messages.MsgRespondService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.keyboard.PulseKeyboardService" tools:node="remove" />
         <service android:name="com.umutk.pulse.extras.palette.wallpaper.LivePaletteWallpaperService" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.features.InstallReceiver" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.features.TimerReceiver" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.localsend.LocalSendActionReceiver" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.lucid.receiver.AlarmReceiver" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.lucid.receiver.AwakeCheckReceiver" tools:node="remove" />
@@ -443,8 +506,11 @@
         <receiver android:name="com.umutk.pulse.widgets.HeartWidget" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.widgets.ActivityWidget" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.widgets.WeekStepsWidget" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.WatchdogReceiver" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.features.DownloadBoot" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.music.OpenAsMusicReceiver" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.music.BluetoothAutoplayReceiver" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.extras.buds.BudsAutoStart" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.island.IslandBoot" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.widgets.Win7Clock1Widget" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.widgets.Win7Clock2Widget" tools:node="remove" />
@@ -517,6 +583,8 @@
         <receiver android:name="com.umutk.pulse.widgets.IosMemoryWidget" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.widgets.IosUpNextWidget" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.widgets.IosWorldWidget" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.widgets.music.WinampWidget" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.widgets.music.WinampWidgetCompact" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsBlobWidget" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsWin7Widget" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsCandyWidget" tools:node="remove" />
@@ -536,6 +604,13 @@
         <receiver android:name="com.umutk.pulse.extras.palette.automation.AutomationReceiver" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.palette.widget.PaletteWidgetProvider" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.palette.widget.PaletteSwatchWidgetProvider" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.widgets.music.LyricsWidget" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.widgets.music.NoiseWidget" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.widgets.music.VideoWidget" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.widgets.music.MusicWidget" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.widgets.music.MusicWidgetSquare" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.widgets.music.MusicWidgetBig" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.widgets.music.MusicWidgetSlim" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.launcher.TaskAlarmReceiver" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.widgets.WeatherWidget" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.widgets.MoonWidget" tools:node="remove" />
@@ -555,7 +630,7 @@
         <receiver android:name="com.umutk.pulse.extras.blackout.HookReceiver" tools:node="remove" />
         <receiver android:name="com.umutk.pulse.extras.blackout.BlackOutBoot" tools:node="remove" />
         <provider android:name="com.umutk.pulse.extras.palette.PaletteIconProvider" tools:node="remove" />
-        <activity-alias android:name="com.umutk.pulse.IconDefault" android:enabled="false" tools:replace="android:enabled" />
+        <activity-alias android:name="com.umutk.pulse.IconDefault" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.NotifHistLauncher" android:enabled="true" tools:replace="android:enabled" />
     </application>
 </manifest>

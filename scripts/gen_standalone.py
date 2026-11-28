@@ -85,7 +85,12 @@ for i in [a[0] for a in apps]:
     for part in SRC.get(i, "").split(","):
         m = re.search(r"/extras/([a-z0-9]+)$", part)
         if m: PKG_OWNER[m.group(1)] = i
-CLASS_OWNER = {"CalendarActivity": "calendar", "ContactsActivity": "contacts", "ImageViewActivity": "photos", "FilesActivity": "files"}
+CLASS_OWNER = {"CalendarActivity": "calendar", "ContactsActivity": "contacts", "ImageViewActivity": "photos", "FilesActivity": "files",
+               "KeyboardSettingsActivity": "keyboard", "OfficeTextActivity": "office", "OfficeViewActivity": "office", "CodeOpenActivity": "code", "PlayLinkActivity": "video",
+               "PhotoWidgetConfig": "photos", "MusicWidgetConfig": "music", "WinampWidgetConfig": "music", "VideoWidgetConfig": "video",
+               "MusicWidget": "music", "MusicWidgetSquare": "music", "MusicWidgetBig": "music", "MusicWidgetSlim": "music", "WinampWidget": "music", "WinampWidgetCompact": "music",
+               "LyricsWidget": "music", "VideoWidget": "video", "NoiseWidget": "whitenoise", "MusicPlaybackService": "music", "VideoPlaybackService": "video",
+               "AmbientPlaybackService": "whitenoise", "LastPlayedToggleTile": "music", "LyricsBatchService": "music", "LyricsListenerService": "music", "PushReceiver": "messages"}
 ALIAS_TARGET = {}
 for e in doc.getElementsByTagName("activity-alias"):
     n = e.getAttributeNS(A, "name"); t = e.getAttributeNS(A, "targetActivity")
@@ -96,6 +101,7 @@ def owner_of(tag, name):
         for i, alias in ALIAS_OF.items():
             if base.endswith(alias): return i
         if base == "ArtCraftLauncher" or base.endswith("ArtCraftLauncher"): return "artcraft"
+        if base == "CodeOpenActivity": return "code"
         # any other alias belongs to the app that owns its target (the Messages compose aliases): removed where the target is removed, or the package cannot be installed
         t = ALIAS_TARGET.get(name)
         return owner_of("activity", t) if t else None
@@ -121,11 +127,39 @@ def core_only(i, tag, n):
         return base not in OWN_WIDGETS.get(i, set())
     return False
 
+INFRA = {"com.umutk.pulse.StandaloneSetupActivity", "androidx.core.content.FileProvider", "com.umutk.pulse.features.share.PulseShareProvider"}
+import glob
+def app_text(i):
+    out = []
+    for g in SRC.get(i, J + "extras/" + i).split(","):
+        if not g: continue
+        for f in (glob.glob(g + "/**/*.kt", recursive=True) if os.path.isdir(g) else glob.glob(g)):
+            out.append(open(f, errors="replace").read())
+    return "\n".join(out)
+APP_TEXT = {}
+def kept_by_group(i):
+    return {n for g in KEEP.get(i, set()) for _, n in COMPONENTS.get(g, [])}
+def core_root(i, tag, n):
+    """True when the component is Pulse Core's own and an app on its own has no use for it: left in, it would keep the whole of Core in the app."""
+    if i == "core" or n in INFRA or n in kept_by_group(i): return False
+    base = n.split(".")[-1]
+    if tag == "activity-alias":
+        t = ALIAS_TARGET.get(n)
+        if n.endswith("." + ALIAS_OF.get(i, "-")) or (t and any(ALIAS_TARGET.get(x) == t for x in ALIAS_TARGET if x.endswith("." + ALIAS_OF.get(i, "-")))): return False
+        return bool(t) and core_root(i, "activity", t)
+    if n == "com.umutk.pulse.MainActivity": return True
+    if base in OWN_WIDGETS.get(i, set()): return False
+    # the activity that the app's own launcher entry opens
+    own = ALIAS_OF.get(i)
+    if own and tag == "activity" and any(ALIAS_TARGET.get(x) == n for x in ALIAS_TARGET if x.endswith("." + own)): return False
+    if i not in APP_TEXT: APP_TEXT[i] = app_text(i)
+    return not re.search(r"\b" + re.escape(base) + r"\b", APP_TEXT[i])
+
 def others(i, already):
     out = ""
     for tag, n in ALL_COMPONENTS:
         o = owner_of(tag, n)
-        if i != "core" and o is None and n not in already and core_only(i, tag, n):
+        if i != "core" and o is None and n not in already and (core_only(i, tag, n) or core_root(i, tag, n)):
             out += f'        <{tag} android:name="{n}" tools:node="remove" />\n'
             continue
         if o is None or n in already: continue
@@ -158,7 +192,7 @@ for i, alias, name in apps:
         # the launcher is a home screen: an icon of its own opens it (and makes it easy to set as the home app)
         perms, comps = trimmed(i)
         body = perms + f'''    <application android:label="{name}" tools:replace="android:label">
-{comps}        <activity-alias android:name="com.umutk.pulse.IconDefault" android:enabled="false" tools:replace="android:enabled" />
+{comps}        <activity-alias android:name="com.umutk.pulse.IconDefault" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.PulseLauncherIcon" android:targetActivity="com.umutk.pulse.extras.launcher.LauncherActivity" android:exported="true"
             android:label="{name}" android:icon="@mipmap/ic_ti_11" android:roundIcon="@mipmap/ic_ti_11">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
@@ -168,7 +202,7 @@ for i, alias, name in apps:
     else:
         perms, comps = trimmed(i)
         body = perms + f'''    <application android:label="{name}" tools:replace="android:label">
-{comps}        <activity-alias android:name="com.umutk.pulse.IconDefault" android:enabled="false" tools:replace="android:enabled" />
+{comps}        <activity-alias android:name="com.umutk.pulse.IconDefault" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.{alias}" android:enabled="true" tools:replace="android:enabled" />
     </application>
 '''
