@@ -35,6 +35,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.keyframes
@@ -521,12 +522,12 @@ private fun Dice() {
             if (!rolling) scope.launch {
                 rolling = true
                 val next = Random.nextInt(1, 7)
-                val a = launch { tiltX.animateTo(tiltX.value + 360f * Random.nextInt(2, 4), tween(1400, easing = LinearOutSlowInEasing)) }
-                val b = launch { turnY.animateTo(turnY.value + 360f * Random.nextInt(2, 4), tween(1400, easing = LinearOutSlowInEasing)) }
-                val c = launch { spinZ.animateTo(spinZ.value + 360f * Random.nextInt(1, 3), tween(1400, easing = LinearOutSlowInEasing)) }
-                val d = launch { lift.animateTo(0f, keyframes { durationMillis = 1400; 0f at 0; 150f at 600 using FastOutSlowInEasing; 0f at 1200; 14f at 1320; 0f at 1400 }) }
+                val a = launch { tiltX.animateTo(tiltX.value + 360f * Random.nextInt(1, 3), tween(800, easing = LinearEasing)) }
+                val b = launch { turnY.animateTo(turnY.value + 360f * Random.nextInt(1, 3), tween(800, easing = LinearEasing)) }
+                val c = launch { spinZ.animateTo(spinZ.value + 360f * Random.nextInt(1, 2), tween(800, easing = LinearEasing)) }
+                val d = launch { lift.animateTo(0f, keyframes { durationMillis = 800; 0f at 0; 120f at 380 using FastOutSlowInEasing; 0f at 800 }) }
                 // the faces change while it is in the air, then it shows the rolled one
-                val e = launch { repeat(16) { shown = Random.nextInt(1, 7); delay(85) }; shown = next }
+                val e = launch { repeat(9) { shown = Random.nextInt(1, 7); delay(80) }; shown = next }
                 a.join(); b.join(); c.join(); d.join(); e.join()
                 face = next
                 prefs(ctx).edit().putInt("dice_last", face).apply()
@@ -564,9 +565,9 @@ private fun CoinFlip() {
                 flipping = true
                 val result = Random.nextBoolean()
                 // several full turns, then the side that was drawn: heads lands on 0, tails on 180
-                val target = turn.value - (turn.value % 360f) + 360f * Random.nextInt(4, 7) + if (result) 0f else 180f
-                val a = launch { turn.animateTo(target, tween(1500, easing = LinearOutSlowInEasing)) }
-                val b = launch { lift.animateTo(0f, keyframes { durationMillis = 1500; 0f at 0; 150f at 700 using FastOutSlowInEasing; 0f at 1500 }) }
+                val target = turn.value - (turn.value % 360f) + 360f * Random.nextInt(2, 4) + if (result) 0f else 180f
+                val a = launch { turn.animateTo(target, tween(750, easing = LinearEasing)) }
+                val b = launch { lift.animateTo(0f, keyframes { durationMillis = 750; 0f at 0; 110f at 350 using FastOutSlowInEasing; 0f at 750 }) }
                 a.join(); b.join()
                 heads = result
                 prefs(ctx).edit().putString("coin_last", if (result) "Heads" else "Tails").apply()

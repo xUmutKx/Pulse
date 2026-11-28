@@ -333,7 +333,7 @@ open class ToolkitTile : TileService() {
         // the result is already stored: the tile lights up and shows a few pictures, then settles on the real one
         flashing = true
         var i = 0
-        val step = object : Runnable { override fun run() { if (i < f.size) { frame = f[i++]; paint(); main.postDelayed(this, 80) } else { frame = null; flashing = false; paint() } } }
+        val step = object : Runnable { override fun run() { if (i < f.size) { frame = f[i++]; paint(); main.postDelayed(this, 45) } else { frame = null; flashing = false; paint() } } }
         main.removeCallbacks(step); main.post(step)
     }
 }
@@ -379,7 +379,7 @@ class DiceTile : ToolkitTile() {
     override fun act(): Boolean { prefs.edit().putInt("dice_last", (1..6).random()).apply(); return true }
     override val picture: Int? get() = prefs.getInt("dice_last", 0).takeIf { it in 1..6 }?.let { DICE_FACES[it - 1] }
     // the die tumbles (eight frames, turning and changing face), then settles on the face that came up
-    override fun flicker(): List<Int> = DICE_SPIN.toList() + listOfNotNull(picture)
+    override fun flicker(): List<Int> = DICE_SPIN.toList() + DICE_SPIN.toList() + listOfNotNull(picture)
 }
 @androidx.annotation.RequiresApi(24)
 class BottleTile : ToolkitTile() {
@@ -425,7 +425,7 @@ class CoinTile : ToolkitTile() {
     // the side that came up; before the first toss the tile shows heads
     override val picture: Int? get() = if (prefs.getString("coin_last", "Heads") == "Tails") R.drawable.ic_coin_tails else R.drawable.ic_coin_heads
     // the coin turns over (its width goes to the edge and back), then lands on the side that came up
-    override fun flicker(): List<Int> = COIN_SPIN.toList() + listOfNotNull(picture)
+    override fun flicker(): List<Int> = COIN_SPIN.toList() + COIN_SPIN.toList() + listOfNotNull(picture)
 }
 @androidx.annotation.RequiresApi(24)
 class ScreenshotTile : ToolkitTile() {
