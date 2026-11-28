@@ -30,6 +30,14 @@ class KbTheme(
 }
 
 object KeyboardThemes {
+    /** The phone's own (Material You) colours, read once by the keyboard view (Android 12+); null before that and on older phones. */
+    @Volatile var sysLight: androidx.compose.material3.ColorScheme? = null
+    @Volatile var sysDark: androidx.compose.material3.ColorScheme? = null
+    fun loadSystem(ctx: android.content.Context) {
+        if (android.os.Build.VERSION.SDK_INT < 31) return
+        runCatching { sysLight = androidx.compose.material3.dynamicLightColorScheme(ctx); sysDark = androidx.compose.material3.dynamicDarkColorScheme(ctx) }
+    }
+
     /** The picker's order. */
     val ids = listOf("samsung", "amoled", "gboard", "material", "win11", "win10", "win7", "xp", "win95", "retro", "midnight", "forest", "rose", "sunset", "contrast", "cvd", "custom")
 
@@ -58,7 +66,12 @@ object KeyboardThemes {
         // Google Keyboard: rounded keys, a calm blue-grey board with the lighter letter keys and a mint action key; four tones (the first is the look of the picture) and key borders that can be switched off
         "gboard" -> {
             val flat = !KeyboardPrefs.gbBorders
-            if (!dark) {
+            val sys = if (KeyboardPrefs.gbTone == "system") (if (dark) sysDark else sysLight) else null
+            // "System colours": the board, keys and action key take the phone's Material You colours (the wallpaper's), as Gboard does on Android 12+
+            if (sys != null) {
+                val bg = sys.surfaceContainer
+                KbTheme(id, bg, if (flat) bg else (if (dark) sys.surfaceContainerHighest else sys.surfaceContainerLowest), sys.onSurface, if (flat) bg else sys.secondaryContainer, sys.onSecondaryContainer, sys.primary, sys.onPrimary, bg, sys.surfaceContainerHigh, sys.onSurfaceVariant, 12, icons = "rounded")
+            } else if (!dark) {
                 val bg = c(0xFFE8EDF0)
                 KbTheme(id, bg, if (flat) bg else c(0xFFFFFFFF), c(0xFF1F2933), if (flat) bg else c(0xFFD3DADF), c(0xFF1F2933), c(0xFF1A73E8), c(0xFFFFFFFF), bg, c(0xFFFFFFFF), c(0xFF5B6770), 12, icons = "rounded")
             } else when (KeyboardPrefs.gbTone) {

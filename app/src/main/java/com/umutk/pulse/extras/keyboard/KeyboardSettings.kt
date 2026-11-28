@@ -174,7 +174,7 @@ fun KeyboardSettings(back: () -> Unit) {
             if (KeyboardPrefs.theme == "gboard") {
                 Text(tr("Tone", "Ton"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("teal" to tr("Teal grey", "Yeşilimsi gri"), "smoke" to tr("Smoke", "Duman"), "black" to tr("Black", "Siyah"), "material" to "Material").forEach { (k, n) ->
+                    listOf("system" to tr("System colours", "Sistem renkleri"), "teal" to tr("Teal grey", "Yeşilimsi gri"), "smoke" to tr("Smoke", "Duman"), "black" to tr("Black", "Siyah"), "material" to "Material").forEach { (k, n) ->
                         PChip(KeyboardPrefs.gbTone == k, n) { KeyboardPrefs.gbTone = k; save() }
                     }
                 }

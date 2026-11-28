@@ -11,9 +11,9 @@ object KeyboardPrefs {
     internal var loaded = false
 
     // look
-    var theme by mutableStateOf("samsung")
+    var theme by mutableStateOf("gboard")   // first start: the Google Keyboard look in the phone's own (Material You) colours
     /** Google Keyboard: its colour tone (teal, black, smoke, material) and whether the keys have their own background. */
-    var gbTone by mutableStateOf("teal")
+    var gbTone by mutableStateOf("system")
     var gbBorders by mutableStateOf(true)
     /** Google Keyboard look: the keys and the board are see-through, with a pale edge (off by default). */
     var gbGlass by mutableStateOf(false)
@@ -208,7 +208,7 @@ object KeyboardPrefs {
     val pressFxNow get() = if (calm) 0 else pressFx
     val rgbNow get() = if (calm) 0 else rgb
     val neuralOn get() = neural && !calm
-    var proRow by mutableStateOf(true)
+    var proRow by mutableStateOf(false)   // the Alt / Esc / Ctrl / Tab row: off until it is switched on
     var proKeys by mutableStateOf(ExtraKeys.DEFAULT)
     /** A second extra row under the first: its own keys (Fn, Home, End, Page keys, editing keys by default). */
     var proRow2 by mutableStateOf(false)
@@ -283,9 +283,9 @@ object KeyboardPrefs {
         runCatching { KbCustomLayouts.all(c) }
         val p = c.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         // once: the extra keys (arrows, Ctrl, ...) sit under the space row from now on
-        if (p.getInt("ver", 0) < 2) p.edit().putBoolean("proRow", true).putBoolean("proBottom", true).putInt("ver", 2).apply()
+        if (p.getInt("ver", 0) < 2) { val fresh = p.all.isEmpty(); p.edit().apply { if (!fresh) putBoolean("proRow", true).putBoolean("proBottom", true) }.putInt("ver", 2).apply() }
         theme = p.getString("theme", theme) ?: theme
-        gbTone = p.getString("gbTone", "teal") ?: "teal"; gbBorders = p.getBoolean("gbBorders", true); gbGlass = p.getBoolean("gbGlass", false); slipMark = p.getBoolean("slipMark", false); blockCts = p.getBoolean("blockCts", false)
+        gbTone = p.getString("gbTone", "system") ?: "system"; gbBorders = p.getBoolean("gbBorders", true); gbGlass = p.getBoolean("gbGlass", false); slipMark = p.getBoolean("slipMark", false); blockCts = p.getBoolean("blockCts", false)
         cBg = p.getInt("cBg", cBg); cKey = p.getInt("cKey", cKey); cText = p.getInt("cText", cText); cSpecial = p.getInt("cSpecial", cSpecial)
         cAccent = p.getInt("cAccent", cAccent); cMenu = p.getInt("cMenu", cMenu); cRadius = p.getInt("cRadius", cRadius)
         heightPct = p.getInt("heightPct", heightPct); landHeightPct = p.getInt("landHeightPct", landHeightPct); landProRow = p.getBoolean("landProRow", landProRow); samProRow = p.getBoolean("samProRow", samProRow); landNumberRow = p.getBoolean("landNumberRow", landNumberRow); autoRatio = p.getInt("autoRatio", autoRatio); autoLevel = p.getInt("autoLevel", autoLevel); sidePad = p.getInt("sidePad", sidePad); bottomPad = p.getInt("bottomPad", bottomPad)
@@ -465,7 +465,7 @@ object KeyboardPrefs {
 
     /** The theme colours only: the custom theme goes back to its first values. */
     fun resetTheme(c: Context) {
-        theme = "samsung"
+        theme = "gboard"; gbTone = "system"; gbBorders = true; gbGlass = false
         cBg = 0xFF000000.toInt(); cKey = 0xFF1F1F1F.toInt(); cText = 0xFFFFFFFF.toInt(); cSpecial = 0xFF151515.toInt(); cAccent = 0xFF4FC3F7.toInt(); cMenu = 0xFF000000.toInt(); cRadius = 10
         save(c)
     }
@@ -474,7 +474,7 @@ object KeyboardPrefs {
     fun factoryReset(c: Context) {
         c.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().clear().apply()
         loaded = false
-        theme = "samsung"; heightPct = 110; landHeightPct = 120; landProRow = false; samProRow = false; landNumberRow = false; autoRatio = 80; autoLevel = 1; sidePad = 2; bottomPad = 0; keyGap = 3; compact = false; compactPct = 66; emojiRight = false; emojiFull = true; modeShrink = 15; commaShrink = 10; oneHand = "off"; langs = "tr,en"
+        theme = "gboard"; gbTone = "system"; gbBorders = true; gbGlass = false; proRow = false; proRow2 = false; heightPct = 110; landHeightPct = 120; landProRow = false; samProRow = false; landNumberRow = false; autoRatio = 80; autoLevel = 1; sidePad = 2; bottomPad = 0; keyGap = 3; compact = false; compactPct = 66; emojiRight = false; emojiFull = true; modeShrink = 15; commaShrink = 10; oneHand = "off"; langs = "tr,en"
         numberRow = false; arrows = false; emojiKey = true; bottomKey = "emoji"; largeText = false; keyPopups = true; longPressSymbols = true; spaceLabel = true
         suggestions = true; autocorrect = true; undoOnBackspace = true; quickPrediction = false; quickPeriod = true; autoCap = true; autoSpace = true
         numEnter = "enter"; cursorControl = true; cursorSens = 100; quickDelete = true; emojiPredictions = true; learn = true; learnMode = 3; autoLang = true; glide = true; flick = true; corners = false; anim = true; smooth = false; cornerHints = true; circleGestures = false; multiTap = false; fileSuggest = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; proIcons = true; split = false; floating = false; floatX = .5f; floatY = 0f; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; bright = 100; bottomBright = 100; topBright = 100; bottomShift = false; dirLayout = false; keyFx = 0; boardFx = 0; motionFx = 0; pressFx = 0; fxColor = 0; fxSpeed = 100; soundKind = 0; rgb = 0; hapticMs = 8; sound = false
