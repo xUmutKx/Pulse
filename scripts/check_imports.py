@@ -48,4 +48,5 @@ for p in problems:
 print(f"{len(problems)} problem(s) found")
 import subprocess
 api = subprocess.run([sys.executable, str(pathlib.Path(__file__).with_name("check_api.py"))]).returncode  # calls missing on older Androids
-sys.exit(1 if problems or api else 0)
+lazy = subprocess.run([sys.executable, str(pathlib.Path(__file__).with_name("check_lazy.py"))]).returncode  # list keys / infinite height
+sys.exit(1 if problems or api else 0)  # (the lazy check only lists candidates: it does not fail the commit)

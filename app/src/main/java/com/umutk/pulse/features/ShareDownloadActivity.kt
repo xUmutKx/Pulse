@@ -147,7 +147,7 @@ private fun ShareUi(url: String, look: String, stream: Boolean = false, close: (
                     Text(if (url.startsWith("magnet:", ignoreCase = true)) magnetParam(url, "dn") ?: tr("Magnet link", "Magnet bağlantısı") else Uri.decode(url.substringBefore('?').substringAfterLast('/')).ifBlank { url }, color = T.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 is LinkFinder.Result.None -> Text(tr("No download link found on that page", "Bu sayfada indirme bağlantısı bulunamadı"), color = T.text, fontSize = 14.sp)
                 is LinkFinder.Result.Found -> LazyColumn(Modifier.heightIn(max = 260.dp)) {
-                    items(r.links, key = { it }) { l ->
+                    items(r.links.distinct(), key = { it }) { l ->
                         val on = chosen == l
                         Column(Modifier.fillMaxWidth().background(if (on) T.accent.copy(alpha = .18f) else androidx.compose.ui.graphics.Color.Transparent).clickable { chosen = l }.padding(vertical = 7.dp, horizontal = 4.dp)) {
                             Text(Uri.decode(l.substringBefore('?').substringAfterLast('/')).ifBlank { l }, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

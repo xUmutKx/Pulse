@@ -434,7 +434,7 @@ fun DebloatScreen(onBack: () -> Unit) {
         if (list.isEmpty()) item { Text("No list yet. Press Update list to download it.", color = T.sub, fontSize = 13.sp) }
 
         if (tab == "uninstall") {
-            items(candidates, key = { it }) { pkg ->
+            items(candidates.distinct(), key = { it }) { pkg ->
                 val info = list[pkg]
                 val level = safetyOf(info?.removal.orEmpty())
                 val sel = pkg in picked

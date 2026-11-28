@@ -90,7 +90,7 @@ fun FilesSearchPage(root: File, showHidden: Boolean, onOpen: (File) -> Unit, onC
                         PIcon("delete", T.sub, 18.dp, Modifier.clickable { FileSearch.forget(ctx); history = emptyList() })
                     }
                 }
-                items(history, key = { it }) { h ->
+                items(history.distinct(), key = { it }) { h ->
                     Row(Modifier.fillMaxWidth().clickable { query = h }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         PIcon("history", T.sub, 20.dp); Spacer(Modifier.width(14.dp))
                         Text(h, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))

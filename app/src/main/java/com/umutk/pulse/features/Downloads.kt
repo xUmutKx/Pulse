@@ -1592,7 +1592,7 @@ private fun DownloadsContent() {
             WinAlert(onDismissRequest = { found = foundQueue.removeFirstOrNull() },
                 title = { Text(tr("Download links", "İndirme bağlantıları")) },
                 text = { androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                    items(links, key = { it }) { l ->
+                    items(links.distinct(), key = { it }) { l ->
                         Column(Modifier.fillMaxWidth().clickable { found = foundQueue.removeFirstOrNull(); Downloads.add(ctx, l) }.padding(vertical = 8.dp)) {
                             Text(Uri.decode(l.substringBefore('?').substringAfterLast('/')).ifBlank { l }, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(Uri.parse(l).host.orEmpty(), color = T.sub, fontSize = 11.sp, maxLines = 1)

@@ -321,7 +321,7 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
             item { Caption(tr("Recent folders", "Son klasörler"), tr("Clear", "Temizle")) { RecentDirs.clear(ctx); dirs = emptyList() } }
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(dirs, key = { it }) { d ->
+                    items(dirs.distinct(), key = { it }) { d ->
                         Row(box(Modifier).clickable { onOpenDir(d) }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                             PIcon("folder", accent, 22.dp)
                             Text("  " + (File(d).name.ifEmpty { tr("Internal storage", "Dahili depolama") }), color = fg, fontSize = 16.sp, maxLines = 1)
