@@ -86,13 +86,19 @@ for i in [a[0] for a in apps]:
         m = re.search(r"/extras/([a-z0-9]+)$", part)
         if m: PKG_OWNER[m.group(1)] = i
 CLASS_OWNER = {"CalendarActivity": "calendar", "ContactsActivity": "contacts", "ImageViewActivity": "photos", "FilesActivity": "files"}
+ALIAS_TARGET = {}
+for e in doc.getElementsByTagName("activity-alias"):
+    n = e.getAttributeNS(A, "name"); t = e.getAttributeNS(A, "targetActivity")
+    if n and t: ALIAS_TARGET["com.umutk.pulse" + n if n.startswith(".") else n] = "com.umutk.pulse" + t if t.startswith(".") else t
 def owner_of(tag, name):
     base = name.split(".")[-1]
     if tag == "activity-alias":
         for i, alias in ALIAS_OF.items():
             if base.endswith(alias): return i
         if base == "ArtCraftLauncher" or base.endswith("ArtCraftLauncher"): return "artcraft"
-        return None
+        # any other alias belongs to the app that owns its target (the Messages compose aliases): removed where the target is removed, or the package cannot be installed
+        t = ALIAS_TARGET.get(name)
+        return owner_of("activity", t) if t else None
     m = re.match(r"com\.umutk\.pulse\.extras\.([a-z0-9]+)\.", name)
     if m and m.group(1) in PKG_OWNER: return PKG_OWNER[m.group(1)]
     if name.startswith("com.umutk.pulse.extras.launcher."): return "launcher"

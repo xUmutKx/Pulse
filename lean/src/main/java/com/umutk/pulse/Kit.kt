@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.toPath
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -41,6 +42,7 @@ val T get() = Look.current
 object Opt {
     var amoledBg by mutableStateOf(true)
     val authentic: Boolean get() = true
+    val oldPopups: Boolean get() = true
     var lang by mutableStateOf("auto")
 }
 

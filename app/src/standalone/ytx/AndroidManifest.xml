@@ -111,6 +111,13 @@
         <activity-alias android:name="com.umutk.pulse.GlassCyanIslandLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassGreenIslandLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassAmberIslandLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.MsgComposeLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassMsgComposeLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassPurpleMsgComposeLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassPinkMsgComposeLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassCyanMsgComposeLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassGreenMsgComposeLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassAmberMsgComposeLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.MusicLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassMusicLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassPurpleMusicLauncher" tools:node="remove" />
@@ -303,6 +310,8 @@
         <activity-alias android:name="com.umutk.pulse.GlassSkyPhotosLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassNavyIslandLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassSkyIslandLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassNavyMsgComposeLauncher" tools:node="remove" />
+        <activity-alias android:name="com.umutk.pulse.GlassSkyMsgComposeLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassNavyMusicLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassSkyMusicLauncher" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.GlassNavyVideoLauncher" tools:node="remove" />
