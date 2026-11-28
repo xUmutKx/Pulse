@@ -79,7 +79,11 @@
     <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <!-- Sound mode tile: Silent needs Do Not Disturb access, and Pulse is listed there only with this -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <!-- the apps of Pulse on their own bring their data over from Pulse (see features/share): only an app signed with the same key may read it -->
+    <permission android:name="com.umutk.pulse.permission.SHARE_DATA" android:protectionLevel="signature" />
+    <uses-permission android:name="com.umutk.pulse.permission.SHARE_DATA" />
     <queries>
+        <package android:name="com.umutk.pulse" />
         <package android:name="com.termux" />
         <package android:name="moe.shizuku.privileged.api" />
         <package android:name="rikka.shizuku" />
@@ -3732,6 +3736,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <!-- the data of an app of Pulse (its preferences and files) for the same app on its own; signature permission, see features/share -->
+        <provider android:name="com.umutk.pulse.features.share.PulseShareProvider" android:authorities="${applicationId}.share" android:exported="true" android:permission="com.umutk.pulse.permission.SHARE_DATA" />
         <!-- the first-start setup of one of Pulse's apps on its own: asks only for what that app needs (see StandaloneSetup.kt) -->
         <activity android:name=".StandaloneSetupActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
     </application>

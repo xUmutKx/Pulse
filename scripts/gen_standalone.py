@@ -7,7 +7,7 @@ import os, re, shutil, xml.dom.minidom as minidom
 A = "http://schemas.android.com/apk/res/android"
 J = "app/src/main/java/com/umutk/pulse/"
 # the code of each app in Pulse (copied into its own repository); the id is the alias without "Launcher", in lower case
-SRC = {"files": J + "features/Explorer*.kt," + J + "files", "photos": J + "photos", "calendar": J + "calendar", "contacts": J + "contacts",
+SRC = {"files": J + "features/Explorer*.kt," + J + "files," + J + "FilesActivity.kt", "photos": J + "Photos*.kt," + J + "ImageViewer.kt", "calendar": J + "Calendar*.kt", "contacts": J + "Contacts*.kt," + J + "Ct*.kt",
        "paint": J + "extras/paint", "calculator": J + "extras/calculator", "code": J + "extras/code", "terminal": J + "features/TerminalPage.kt",
        "clock": J + "extras/lucid", "ebook": J + "extras/ebook", "browser": J + "extras/browser", "office": J + "Office*.kt", "music": J + "extras/music",
        "video": J + "extras/video", "whitenoise": J + "extras/whitenoise", "voice": J + "extras/voice", "notes": J + "extras/notes", "weather": J + "extras/weather",
@@ -190,5 +190,31 @@ with open("app/src/main/java/com/umutk/pulse/extras/store/PulseAppsCatalog.kt", 
     for i, alias, name, en, trk, feats in rows:
         fe = ", ".join(f"{q(a)} to {q(b)}" for a, b in feats)
         f.write(f"        PulseApp({q(i)}, {q(name)}, {q(en)}, {q(trk)}, listOf({fe}), {q(repo_of[i])}),\n")
+    f.write("    )\n}\n")
+# ---- what an app brings over from Pulse (app/src/main/java/com/umutk/pulse/features/share/PulseShareCatalog.kt) -------------------------------------------------------
+# the preferences files an app uses are found in its own code (every getSharedPreferences("name") and FILE = "name" of its folder); the files are named here
+import glob as _glob
+FILES = {
+    "keyboard": ["clips", "kb_font", "kb_sound", "kb_picture.img", "kb_space.img", "kb_walker.img", "kbd"] + [f"kbd_{n}" for n in ("banned.txt", "clips.json", "confusion.txt", "forms.txt", "keys.txt", "pairs.txt", "rejects.txt", "touch.txt", "typo_seen.txt", "typos.txt", "user.txt")],
+    "music": ["playlists", "resume.m3u8", "skins", "music_playlog.tsv", "music_library.tsv"], "notes": ["notes"], "video": ["subs"], "ebook": ["covers"],
+}
+def prefs_of(i):
+    names = set()
+    for part in SRC.get(i, "").split(","):
+        for path in _glob.glob(part):
+            files = [path] if os.path.isfile(path) else [os.path.join(r, f) for r, _, fs in os.walk(path) for f in fs if f.endswith(".kt")]
+            for fp in files:
+                t = open(fp, encoding="utf-8", errors="ignore").read()
+                names.update(re.findall(r'getSharedPreferences\("([A-Za-z0-9_]+)"', t))
+                names.update(re.findall(r'\bFILE\s*=\s*"([A-Za-z0-9_]+)"', t))
+    return sorted(names)
+with open("app/src/main/java/com/umutk/pulse/features/share/PulseShareCatalog.kt", "w", encoding="utf-8") as f:
+    f.write("package com.umutk.pulse.features.share\n\n// made by scripts/gen_standalone.py: do not edit by hand\n\n")
+    f.write("/** What one app of Pulse brings over to the same app on its own: the names of its preferences files and the files / folders of Pulse's files folder. */\n")
+    f.write("class ShareSpec(val prefs: List<String>, val files: List<String>)\n\nobject PulseShareCatalog {\n    val specs = mapOf(\n")
+    for i, alias, name in apps:
+        if i == "core": continue
+        pf = ", ".join(f'"{n}"' for n in prefs_of(i)); fl = ", ".join(f'"{n}"' for n in FILES.get(i, []))
+        f.write(f'        "{i}" to ShareSpec(listOf({pf}), listOf({fl})),\n')
     f.write("    )\n}\n")
 print(len(apps), "apps:", " ".join(a[0] for a in apps))

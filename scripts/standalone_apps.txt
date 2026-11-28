@@ -1,8 +1,8 @@
 # id | launcher alias | name | repository (github.com/xUmutKx/<repo>) | the app's own code in Pulse (made by scripts/gen_standalone.py)
-files|FilesLauncher|Pulse Files|Pulse-Files|app/src/main/java/com/umutk/pulse/features/Explorer*.kt,app/src/main/java/com/umutk/pulse/files
-calendar|CalendarLauncher|Pulse Calendar|Pulse-Calendar|app/src/main/java/com/umutk/pulse/calendar
-contacts|ContactsLauncher|Pulse Contacts|Pulse-Contacts|app/src/main/java/com/umutk/pulse/contacts
-photos|PhotosLauncher|Pulse Photos|Pulse-Photos|app/src/main/java/com/umutk/pulse/photos
+files|FilesLauncher|Pulse Files|Pulse-Files|app/src/main/java/com/umutk/pulse/features/Explorer*.kt,app/src/main/java/com/umutk/pulse/files,app/src/main/java/com/umutk/pulse/FilesActivity.kt
+calendar|CalendarLauncher|Pulse Calendar|Pulse-Calendar|app/src/main/java/com/umutk/pulse/Calendar*.kt
+contacts|ContactsLauncher|Pulse Contacts|Pulse-Contacts|app/src/main/java/com/umutk/pulse/Contacts*.kt,app/src/main/java/com/umutk/pulse/Ct*.kt
+photos|PhotosLauncher|Pulse Photos|Pulse-Photos|app/src/main/java/com/umutk/pulse/Photos*.kt,app/src/main/java/com/umutk/pulse/ImageViewer.kt
 ytx|YtxLauncher|YTXTube|Pulse-YTXTube|app/src/main/java/com/umutk/pulse/extras/ytx
 island|IslandLauncher|Pulse Island|Pulse-Island|app/src/main/java/com/umutk/pulse/extras/island
 music|MusicLauncher|Pulse Music Player|Pulse-MusicPlayer|app/src/main/java/com/umutk/pulse/extras/music

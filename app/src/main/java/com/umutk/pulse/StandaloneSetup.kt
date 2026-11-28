@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
+import kotlinx.coroutines.launch
 
 /**
  * The first start of one of Pulse's apps on its own (see Standalone.kt): a setup screen of its own that asks only for what THAT app needs, one row for each
@@ -208,6 +209,27 @@ fun StandaloneSetupScreen(id: String, onDone: () -> Unit) {
                         Text(item.why, color = T.sub, fontSize = 12.sp)
                     }
                 }
+            }
+        }
+        // Pulse is on this phone too: its data for this app (settings, lists, notes ...) can be brought over once (the two apps keep separate copies afterwards)
+        if (com.umutk.pulse.features.share.PulseShare.pulseThere(ctx) && com.umutk.pulse.features.share.PulseShareCatalog.specs.containsKey(id)) {
+            var note by remember { mutableStateOf("") }
+            var busy by remember { mutableStateOf(false) }
+            val scope = androidx.compose.runtime.rememberCoroutineScope()
+            WelcomeCard(tr("Your data from Pulse", "Pulse'taki verilerin")) {
+                WelcomeLine(tr("Pulse is on this phone: bring over what you set up there for this app (settings, lists, saved items). Pulse keeps its own copy.",
+                    "Pulse bu telefonda: bu uygulama için orada yaptığın ayarları, listeleri ve kayıtlı şeyleri getir. Pulse kendi kopyasını tutar."))
+                Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PButton(if (busy) tr("Bringing…", "Getiriliyor…") else tr("Bring my data", "Verilerimi getir")) {
+                        if (!busy) { busy = true; scope.launch {
+                            val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.umutk.pulse.features.share.PulseShare.pickUp(ctx, id) }
+                            busy = false
+                            note = if (r == null) tr("Pulse did not hand it over (it needs Pulse 2.0.37 or newer, signed with the same key).", "Pulse vermedi (Pulse 2.0.37 ya da yenisi ve aynı anahtarla imzalı olmalı).")
+                                else tr("Done: ${r.prefs} settings groups and ${r.files} files.", "Tamam: ${r.prefs} ayar grubu ve ${r.files} dosya.")
+                        } }
+                    }
+                }
+                if (note.isNotEmpty()) WelcomeLine(note)
             }
         }
         Text(tr("$name keeps everything on this phone. Nothing is sent to us. The terms and the privacy notice are in its settings.",
