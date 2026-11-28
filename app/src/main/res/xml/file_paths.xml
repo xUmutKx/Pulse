@@ -12,6 +12,8 @@
     <files-path name="callbg" path="callbg/" />
     <!-- ArtCraft APKs downloaded to the app's own storage (install through the system installer) -->
     <files-path name="artcraft" path="artcraft/" />
+    <!-- the apps of Pulse downloaded from Pulse Core's Extra apps page (installed through the system installer) -->
+    <files-path name="pulseapps" path="apps/" />
     <!-- pictures kept by the keyboard clipboard (pasted into fields that take images) -->
     <files-path name="clips" path="clips/" />
 </paths>

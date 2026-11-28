@@ -139,8 +139,7 @@ object StandaloneSetup {
         "notifhist" -> listOf(listener(tr("Save the notifications you receive.", "Aldığın bildirimleri kaydetme.")), notifications)
         "gamehub" -> listOf(usage(tr("Play time of each game.", "Her oyunun oynama süresi.")), overlay(tr("The menu over a running game.", "Çalışan oyunun üstündeki menü.")), notifications)
         "health" -> listOf(Item("heart", tr("Activity", "Aktivite"), tr("Steps and workouts.", "Adımlar ve antrenmanlar."), if (Build.VERSION.SDK_INT >= 29) listOf(Manifest.permission.ACTIVITY_RECOGNITION) else emptyList()), notifications)
-        "localsend" -> listOf(files(), notifications, Item("phone", tr("Nearby devices", "Yakındaki cihazlar"), tr("Find phones and computers on your Wi-Fi.", "Wi-Fi'ındaki telefon ve bilgisayarları bulma."),
-            if (Build.VERSION.SDK_INT >= 33) listOf("android.permission.NEARBY_WIFI_DEVICES") else listOf(Manifest.permission.ACCESS_FINE_LOCATION)))
+        "localsend" -> listOf(files(), notifications, Item("phone", tr("Location", "Konum"), tr("Find phones and computers on your Wi-Fi (Android asks for it to scan).", "Wi-Fi'ındaki telefon ve bilgisayarları bulma (Android tarama için ister)."), listOf(Manifest.permission.ACCESS_FINE_LOCATION)))
         "ai" -> listOf(mic(tr("Speak instead of typing.", "Yazmak yerine konuşma.")), notifications)
         "browser", "tempmail", "extrastore", "calculator" -> listOf(notifications)
         else -> listOf(notifications)

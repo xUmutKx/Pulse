@@ -1,7 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Pulse Keyboard as an app of its own (-PpulseApp=keyboard), made by scripts/gen_standalone.py: do not edit by hand. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" tools:node="remove" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" tools:node="remove" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" tools:node="remove" />
+    <uses-permission android:name="android.permission.CALL_PHONE" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" tools:node="remove" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" tools:node="remove" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:node="remove" />
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" tools:node="remove" />
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.SEND_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_MMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_WAP_PUSH" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:node="remove" />
+    <uses-permission android:name="android.permission.SET_WALLPAPER" tools:node="remove" />
     <application android:label="Pulse Keyboard" tools:replace="android:label">
+        <service android:name="com.umutk.pulse.features.AutoClickService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.blackout.AppWatch" tools:node="remove" />
+        <service android:name="com.umutk.pulse.applock.CacheCleanService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.features.CoverAccessibilityService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.applock.LockService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.notifhist.NotifHistListener" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.island.IslandListenerService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.lyrics.LyricsListenerService" tools:node="remove" />
+        <provider android:name="rikka.shizuku.ShizukuProvider" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.extras.messages.SmsDeliverReceiver" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.extras.messages.SmsReceivedReceiver" tools:node="remove" />
+        <receiver android:name="com.android.mms.transaction.PushReceiver" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.extras.messages.MmsInReceiver" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.IconDefault" android:enabled="false" tools:replace="android:enabled" />
         <activity-alias android:name="com.umutk.pulse.KeyboardLauncher" android:enabled="true" tools:replace="android:enabled" />
     </application>

@@ -102,6 +102,8 @@ private fun inList(s: ModuleState) = s == ModuleState.INSTALLED || s == ModuleSt
 /** Extra Apps store: search, categories, featured, details, installed list and updates. */
 @Composable
 fun ExtraStoreScreen(onBack: () -> Unit = {}) {
+    // Pulse Core has no extra apps inside: its Extra apps page lists the apps of Pulse that can be downloaded
+    if (com.umutk.pulse.Standalone.core) { PulseAppsScreen(onBack); return }
     val ctx = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current
     val rev by StoreInstaller.rev.collectAsState()

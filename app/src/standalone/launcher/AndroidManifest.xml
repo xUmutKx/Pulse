@@ -1,7 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Pulse Launcher as an app of its own (-PpulseApp=launcher), made by scripts/gen_standalone.py: do not edit by hand. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" tools:node="remove" />
+    <uses-permission android:name="android.permission.CAMERA" tools:node="remove" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.SEND_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_MMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_WAP_PUSH" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_SMS" tools:node="remove" />
+    <uses-permission android:name="android.permission.SET_WALLPAPER" tools:node="remove" />
     <application android:label="Pulse Launcher" tools:replace="android:label">
+        <service android:name="com.umutk.pulse.features.AutoClickService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.blackout.AppWatch" tools:node="remove" />
+        <service android:name="com.umutk.pulse.applock.CacheCleanService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.features.CoverAccessibilityService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.keyboard.AccessKeyboardService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.applock.LockService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.notifhist.NotifHistListener" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.lyrics.LyricsListenerService" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.extras.messages.SmsDeliverReceiver" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.extras.messages.SmsReceivedReceiver" tools:node="remove" />
+        <receiver android:name="com.android.mms.transaction.PushReceiver" tools:node="remove" />
+        <receiver android:name="com.umutk.pulse.extras.messages.MmsInReceiver" tools:node="remove" />
         <activity-alias android:name="com.umutk.pulse.IconDefault" android:enabled="false" tools:replace="android:enabled" />
         <activity-alias android:name="com.umutk.pulse.PulseLauncherIcon" android:targetActivity="com.umutk.pulse.extras.launcher.LauncherActivity" android:exported="true"
             android:label="Pulse Launcher" android:icon="@mipmap/ic_ti_11" android:roundIcon="@mipmap/ic_ti_11">
