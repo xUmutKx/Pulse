@@ -110,10 +110,24 @@ for tag in ("activity", "activity-alias", "service", "receiver", "provider"):
         n = e.getAttributeNS(A, "name")
         if n: ALL_COMPONENTS.append((tag, "com.umutk.pulse" + n if n.startswith(".") else n))
 
+# Pulse Core's own home-screen widgets (clock, CPU, battery ... in every look) and its Quick Settings tiles are dead weight in an app on its own: with their manifest entries gone,
+# the shrinker drops their code and pictures. The widgets that belong to an app stay with it.
+OWN_WIDGETS = {"contacts": {"ContactsWidget"}, "voice": {"VoiceWidget"}, "photos": {"PhotoWidget"}, "clock": {"NextAlarmWidget"},
+               "health": {"StepsWidget", "DistanceWidget", "HeartWidget", "ActivityWidget", "WeekStepsWidget"}}
+def core_only(i, tag, n):
+    base = n.split(".")[-1]
+    if tag == "service" and base.endswith("Tile") and "LastPlayed" not in base: return True
+    if tag == "receiver" and n.startswith("com.umutk.pulse.widgets.") and n.count(".") == 4 and base.endswith("Widget"):
+        return base not in OWN_WIDGETS.get(i, set())
+    return False
+
 def others(i, already):
     out = ""
     for tag, n in ALL_COMPONENTS:
         o = owner_of(tag, n)
+        if i != "core" and o is None and n not in already and core_only(i, tag, n):
+            out += f'        <{tag} android:name="{n}" tools:node="remove" />\n'
+            continue
         if o is None or n in already: continue
         # Pulse Core keeps no app of its own; an app keeps its own components; the launcher app keeps its own folder
         if i == "core" or o != i:
