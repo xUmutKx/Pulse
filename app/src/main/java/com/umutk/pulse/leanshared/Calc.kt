@@ -1,5 +1,8 @@
 package com.umutk.pulse.features
 
+import java.math.BigDecimal
+import java.math.MathContext
+
 /** The calculator's arithmetic on what the keypad types: + − × ÷ with the usual precedence, a minus in front of a number,
  *  and % ("50%" is 0.5; after + or − it is that share of the left side, so 200+10% is 220). Null when [s] is incomplete or divides by zero. */
 internal object Calc {
