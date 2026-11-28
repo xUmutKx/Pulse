@@ -41,6 +41,19 @@ ${appPerms.joinToString("\n") { "    <uses-permission android:name=\"android.per
 </manifest>
 """)
 
+// Pulse's own look system, copied as it is (never edited here): the colours and shapes of every look (95, XP, 7, 10, 11, Material, AMOLED, One UI, ColorOS), the per-look controls
+// and the Fluent vector icons. What the look files need from the rest of Pulse is in src/main/java/com/umutk/pulse/Kit.kt (small stand-ins).
+val lookFiles = listOf("PTheme", "Controls", "OemLooks", "ColorOsLooks", "OneUiLooks", "FluentIcon", "BinIcon", "FluentPaths", "FluentColor", "FluentFilled", "FluentMat", "Mica", "MenuStyle7", "MenuStyle95", "MenuStyle10", "MenuStyle11", "MenuStyleXp", "MenuStyleColorOs", "MenuStyleMaterial", "MenuStyleOneUi", "ThemedMenu")
+val leanLook = tasks.register<Copy>("leanLook") {
+    from(rootProject.file("app/src/main/java/com/umutk/pulse")) { include(lookFiles.map { "$it.kt" }); include("extras/IncognitoGlyph.kt") }
+    into(layout.buildDirectory.dir("leanLook/kotlin"))
+}
+val leanLookRes = tasks.register<Copy>("leanLookRes") {
+    from(rootProject.file("app/src/main/res/drawable")) { include("mat_*.xml") }
+    into(layout.buildDirectory.dir("leanLook/res/drawable"))
+}
+tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(leanLook, leanLookRes) }
+
 android {
     namespace = "com.umutk.pulse.lean"
     compileSdk = 36
@@ -76,6 +89,8 @@ android {
         for (d in appRow[2].split(",")) java.srcDir(rootProject.file("app/src/main/java/com/umutk/pulse/$d"))
         java.srcDir(rootProject.file("app/src/main/java/com/umutk/pulse/leanshared"))
         java.srcDir(file("src/apps/$leanApp"))
+        java.srcDir(layout.buildDirectory.dir("leanLook/kotlin"))
+        res.srcDir(layout.buildDirectory.dir("leanLook/res"))
     }
     packaging { resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "DebugProbesKt.bin", "kotlin-tooling-metadata.json", "META-INF/*.version") }
 }
@@ -87,5 +102,6 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-core")
     for (l in appLibs) implementation(l)
 }
