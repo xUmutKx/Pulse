@@ -271,8 +271,10 @@ private fun PermissionsCard() {
  * This list is written again for every release (it was left at an old version before, so an old note showed after an update).
  */
 private val WHATS_NEW = listOf(
-    "keyboard" to (tr("Keyboard: copied links lose their trackers, one-time codes in the bar, long copies in quick paste again; new tools for the ⋮ menu (open an app, flashlight, web search, alarm, emoji mix); import another keyboard's dictionary, a theme from a screenshot, your own key sound and font, five new press splashes.",
-        "Klavye: kopyalanan linkler izleyicilerden temizlenir, tek kullanımlık kodlar çubukta, uzun kopyalar yine hızlı yapıştırmada; ⋮ menüsü için yeni araçlar (uygulama aç, fener, web arama, alarm, emoji karıştır); başka klavyenin sözlüğünü al, ekran görüntüsünden tema, kendi tuş sesin ve yazı tipin, beş yeni basma efekti.")),
+    "store" to (tr("Every app on its own now has its own first-start setup and keeps only the rights it needs. Pulse Core's Extra apps page lists each app with its features and a Download button.",
+        "Her ayrı uygulamanın kendi ilk kurulum ekranı var ve sadece ihtiyacı olan izinleri taşır. Pulse Core'un Ekstra uygulamalar sayfası her uygulamayı özellikleri ve İndir düğmesiyle listeler.")),
+    "lock" to (tr("Fixed a crash on Samsung / Android 17 (the clipboard was denied to a text field).",
+        "Samsung / Android 17'de çökme düzeltildi (bir yazı kutusuna pano erişimi reddediliyordu).")),
 )
 /** After an update: what is new in this version, nothing to set up again (permissions and terms were done on the first start). */
 @Composable
