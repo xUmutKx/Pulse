@@ -1132,6 +1132,16 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.numpad != (currentInputEditorInfo?.inputType?.and(InputType.TYPE_MASK_CLASS).let { it == InputType.TYPE_CLASS_NUMBER || it == InputType.TYPE_CLASS_PHONE || it == InputType.TYPE_CLASS_DATETIME })) syncKind(currentInputEditorInfo)
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         selStart = newSelStart; selEnd = newSelEnd
+        // the field was emptied by the app (its own send button, not the keyboard's Enter): nothing that was being mended may be written into the empty field afterwards,
+        // or the sent message's last word would come back alone. The open word and every correction still on its way are dropped, the text stays as it was sent.
+        if (newSelStart == 0 && newSelEnd == 0 && oldSelStart > 0) {
+            val ic0 = currentInputConnection
+            if (ic0 != null && ic0.getTextBeforeCursor(1, 0).isNullOrEmpty() && ic0.getTextAfterCursor(1, 0).isNullOrEmpty()) {
+                editEpoch++
+                word.clear(); target = null; peak = null; lastCorrection = null
+                pauseHandler.removeCallbacksAndMessages(null)
+            }
+        }
         // the field was emptied (a message was sent: the app clears it after the Enter) or the cursor jumped: the capital letter is worked out again from what is there now
         if (word.isEmpty() && newSelStart == newSelEnd && (newSelStart == 0 || Math.abs(newSelStart - oldSelStart) > 1)) updateCaps()
         // the cursor went somewhere else after a correction: backspace must not undo that correction any more
@@ -1605,6 +1615,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 runCatching { if (pending != null) pending.get(3, java.util.concurrent.TimeUnit.SECONDS) else KeyboardDictionary.uncancelled { compute(code, loc, typed, pw, up, pw2, ctxText = ctx).third } }.getOrNull()
             } ?: return@launch
             if (epoch != editEpoch) return@launch
+            // a correction that is ready long after the last key (the typing is over: the message may be on its way out) is dropped: it only mends words while they are being typed
+            if (SystemClock.uptimeMillis() - editAt > 2500L) return@launch
             val lo = typed.lowercase(loc); val fl = fix.lowercase(loc)
             if (fl == lo || KeyboardDictionary.isKept(typed) || KeyboardDictionary.rejectedAtLeast(lo, KeyboardPrefs.undoToKeep)) return@launch
             val key = typed + tail
@@ -1617,6 +1629,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val c = currentInputConnection ?: return@launch
                 if (st.plain) return@launch
                 val before = c.getTextBeforeCursor(160, 0)?.toString() ?: return@launch
+                if (before.isEmpty()) return@launch   // an empty field: the message was sent, nothing is written into it
                 val at = before.lastIndexOf(key)
                 if (at < 0) return@launch
                 val rest = before.substring(at + key.length)
