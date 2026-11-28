@@ -1180,6 +1180,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     fun cornersOn() = if (isLetterNow) KeyboardPrefs.corners else KeyboardPrefs.numCorners != "off"
     val view = androidx.compose.ui.platform.LocalView.current
     val bg = if (th.samsung) (when (k.kind) { KeyKind.CHAR, KeyKind.MULTI, KeyKind.SPACE, KeyKind.COMMA, KeyKind.PERIOD -> th.key; else -> th.special })
+        else if (th.gboard) (when (k.kind) { KeyKind.CHAR, KeyKind.MULTI, KeyKind.SPACE, KeyKind.COMMA, KeyKind.PERIOD -> th.key; KeyKind.ENTER -> th.accent; else -> th.special })
         else when (k.kind) { KeyKind.CHAR, KeyKind.MULTI, KeyKind.SPACE, KeyKind.ENTER -> lerp(th.key, androidx.compose.ui.graphics.Color(0xFF808080), .07f); else -> th.special }
     // a cap of the person's own: its colour replaces the theme's (the press still lightens it)
     val capKey = when (k.kind) { KeyKind.SPACE -> "space"; KeyKind.ENTER -> "enter"; KeyKind.SHIFT -> "shift"; KeyKind.DELETE -> "delete"; else -> k.label.lowercase().takeIf { k.kind == KeyKind.CHAR && it.length == 1 } }
@@ -1389,12 +1390,12 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         st.trail = emptyList()
                     }
                 }
-            }.padding(horizontal = if (th.samsung) 3.dp else KeyboardPrefs.gap.dp * .75f, vertical = if (th.samsung) 6.dp else KeyboardPrefs.gap.dp / 2),
+            }.padding(horizontal = if (th.samsung) 3.dp else if (th.gboard) 2.5.dp else KeyboardPrefs.gap.dp * .75f, vertical = if (th.samsung) 6.dp else if (th.gboard) 4.dp else KeyboardPrefs.gap.dp / 2),
     ) {
         val special = k.kind != KeyKind.CHAR && k.kind != KeyKind.SPACE
-        val fg = if (th.samsung && k.kind == KeyKind.ENTER) th.accent else when (k.kind) { KeyKind.CHAR, KeyKind.MULTI, KeyKind.SPACE, KeyKind.ENTER -> th.text; else -> th.specialText }
+        val fg = if (th.samsung && k.kind == KeyKind.ENTER) th.accent else if (th.gboard && k.kind == KeyKind.ENTER) th.onAccent else when (k.kind) { KeyKind.CHAR, KeyKind.MULTI, KeyKind.SPACE, KeyKind.ENTER -> th.text; else -> th.specialText }
         val keyHue = LocalHue.current
-        Box(Modifier.fillMaxSize().graphicsLayer { scaleX = grow; scaleY = grow }.keyLook(th, fill, down, RoundedCornerShape(th.radius.dp)).keyWash(KeyboardPrefs.keyFxNow, th.accent, with(androidx.compose.ui.platform.LocalDensity.current) { th.radius.dp.toPx() })
+        Box(Modifier.fillMaxSize().graphicsLayer { scaleX = grow; scaleY = grow }.keyLook(th, fill, down, if (th.gboard && k.kind == KeyKind.ENTER) RoundedCornerShape(50) else RoundedCornerShape(th.radius.dp)).keyWash(KeyboardPrefs.keyFxNow, th.accent, with(androidx.compose.ui.platform.LocalDensity.current) { th.radius.dp.toPx() })
             .then(if (KeyboardPrefs.rgbNow == 2 && keyHue != null) Modifier.drawWithContent { drawContent(); val h = (keyHue.value + rect.left / maxOf(1f, st.rootW) * 300f) % 360f; drawRoundRect(Color.hsv(h, .9f, 1f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(th.radius.dp.toPx()), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())) } else Modifier)
             // the chasing light: a bright arc runs round the edge of the key (turning once per colour cycle, each key a little ahead of the one beside it), the rest of the edge stays faint
             .then(if (KeyboardPrefs.rgbNow == 3 && keyHue != null) Modifier.drawWithContent {

@@ -15,6 +15,9 @@ class KbTheme(
     /** The Samsung look: its own bottom row (!#1, comma, the space bar with the language, period, the action key in the accent colour), the number row, round toolbar buttons. */
     val samsung: Boolean get() = id == "samsung"
 
+    /** The Google Keyboard look: rounded keys (not pills), tight gaps, letter keys in one colour, the action key a pill in the accent colour (as Gboard draws it). */
+    val gboard: Boolean get() = id == "gboard"
+
     /** The see-through form: keys, function keys and board take an alpha and the keys a pale edge (a frosted pane; the window itself is not blurred). */
     fun glassed(): KbTheme = KbTheme(id, bg.copy(alpha = .62f), key.copy(alpha = .5f), text, special.copy(alpha = .42f), specialText, accent, onAccent, menu.copy(alpha = .62f), popup, sub, radius, bevel, Color.White.copy(alpha = .16f), icons)
 
@@ -57,12 +60,12 @@ object KeyboardThemes {
             val flat = !KeyboardPrefs.gbBorders
             if (!dark) {
                 val bg = c(0xFFE8EDF0)
-                KbTheme(id, bg, if (flat) bg else c(0xFFFFFFFF), c(0xFF1F2933), if (flat) bg else c(0xFFD3DADF), c(0xFF1F2933), c(0xFF1A73E8), c(0xFFFFFFFF), bg, c(0xFFFFFFFF), c(0xFF5B6770), 22, icons = "rounded")
+                KbTheme(id, bg, if (flat) bg else c(0xFFFFFFFF), c(0xFF1F2933), if (flat) bg else c(0xFFD3DADF), c(0xFF1F2933), c(0xFF1A73E8), c(0xFFFFFFFF), bg, c(0xFFFFFFFF), c(0xFF5B6770), 12, icons = "rounded")
             } else when (KeyboardPrefs.gbTone) {
-                "black" -> { val bg = c(0xFF000000); KbTheme(id, bg, if (flat) bg else c(0xFF202124), c(0xFFE8EAED), if (flat) bg else c(0xFF171717), c(0xFFE8EAED), c(0xFF8AB4F8), c(0xFF0B1A33), bg, c(0xFF3C4043), c(0xFF9AA0A6), 22, icons = "rounded") }
-                "smoke" -> { val bg = c(0xFF2B2B2E); KbTheme(id, bg, if (flat) bg else c(0xFF48484C), c(0xFFEDEDF0), if (flat) bg else c(0xFF38383B), c(0xFFEDEDF0), c(0xFFA8C7FA), c(0xFF062E6F), bg, c(0xFF5A5A5F), c(0xFFB0B0B6), 22, icons = "rounded") }
-                "material" -> { val bg = c(0xFF1C1B1F); KbTheme(id, bg, if (flat) bg else c(0xFF36343B), c(0xFFE6E1E5), if (flat) bg else c(0xFF2B2930), c(0xFFE6E1E5), c(0xFFD0BCFF), c(0xFF381E72), bg, c(0xFF49454F), c(0xFFCAC4D0), 22, icons = "rounded") }
-                else -> { val bg = c(0xFF28343A); KbTheme(id, bg, if (flat) bg else c(0xFF424D54), c(0xFFE3E8EB), if (flat) bg else c(0xFF313C42), c(0xFFE3E8EB), c(0xFF6DB1A8), c(0xFF0B2B27), bg, c(0xFF4F5B62), c(0xFFAAB6BD), 22, icons = "rounded") }
+                "black" -> { val bg = c(0xFF000000); KbTheme(id, bg, if (flat) bg else c(0xFF202124), c(0xFFE8EAED), if (flat) bg else c(0xFF171717), c(0xFFE8EAED), c(0xFF8AB4F8), c(0xFF0B1A33), bg, c(0xFF3C4043), c(0xFF9AA0A6), 12, icons = "rounded") }
+                "smoke" -> { val bg = c(0xFF2B2B2E); KbTheme(id, bg, if (flat) bg else c(0xFF48484C), c(0xFFEDEDF0), if (flat) bg else c(0xFF38383B), c(0xFFEDEDF0), c(0xFFA8C7FA), c(0xFF062E6F), bg, c(0xFF5A5A5F), c(0xFFB0B0B6), 12, icons = "rounded") }
+                "material" -> { val bg = c(0xFF1C1B1F); KbTheme(id, bg, if (flat) bg else c(0xFF36343B), c(0xFFE6E1E5), if (flat) bg else c(0xFF2B2930), c(0xFFE6E1E5), c(0xFFD0BCFF), c(0xFF381E72), bg, c(0xFF49454F), c(0xFFCAC4D0), 12, icons = "rounded") }
+                else -> { val bg = c(0xFF28343A); KbTheme(id, bg, if (flat) bg else c(0xFF424D54), c(0xFFE3E8EB), if (flat) bg else c(0xFF313C42), c(0xFFE3E8EB), c(0xFF6DB1A8), c(0xFF0B2B27), bg, c(0xFF4F5B62), c(0xFFAAB6BD), 12, icons = "rounded") }
             }
         }
         "amoled" -> KbTheme(id, c(0xFF000000), c(0xFF1F1F1F), c(0xFFFFFFFF), c(0xFF141414), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFF000000), c(0xFF000000), c(0xFF2B2B2B), c(0xFF9A9A9A), 10, icons = "outlined")
